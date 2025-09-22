@@ -1,0 +1,14 @@
+Problem Name	Platform	Link	Topic	Status	
+Collect Coins In A Tree	LeetCode	https://leetcode.com/problems/collect-coins-in-a-tree/description/	Tree pruning, bahut se OA me aaya hai done	Solved	
+Largest Component Size By Common Factor	LeetCode	https://leetcode.com/problems/largest-component-size-by-common-factor/description/	VVI, krke jao, 5 times se jayda	Pending	
+Tree Of Coprimes	LeetCode	https://leetcode.com/problems/tree-of-coprimes/description/	oa pe is concept bahut aaye hai	Pending	
+Largest Color Value In A Directed Graph	LeetCode	https://leetcode.com/problems/largest-color-value-in-a-directed-graph/description/		Pending	
+Maximum Sum Bst In Binary Tree	LeetCode	https://leetcode.com/problems/maximum-sum-bst-in-binary-tree/description/		Pending	
+Parallel Courses Ii	LeetCode	https://leetcode.com/problems/parallel-courses-ii/description/		Pending	
+Longest Cycle In A Graph	LeetCode	https://leetcode.com/problems/longest-cycle-in-a-graph/description/	VVI TOPO SORT SE SMJHNA BAHUT IMPORTANT CONCEPT	Pending	
+Maximum Employees To Be Invited To A Meeting	LeetCode	https://leetcode.com/problems/maximum-employees-to-be-invited-to-a-meeting/description/	VVI on upper concept, SHL OA, Interviews of google	Pending	
+Minimum Obstacle Removal To Reach Corner	LeetCode	https://leetcode.com/problems/minimum-obstacle-removal-to-reach-corner/description/	0-1 BFS se kro	Pending	
+Distribute Coins In Binary Tree	LeetCode	https://leetcode.com/problems/distribute-coins-in-binary-tree/description/		Pending	
+Binary Tree Cameras	LeetCode	https://leetcode.com/problems/binary-tree-cameras/description/	DESHAW INTERVIEW, CONFLUENT INTERVIEW, Multiple OA	Pending	
+Couples Holding Hands	LeetCode	https://leetcode.com/problems/couples-holding-hands/description/	Mere se confluent interview me pucha tha	Pending	
+Rank Transform Of A Matrix	LeetCode	https://leetcode.com/problems/rank-transform-of-a-matrix/description/	VVI	Pending
