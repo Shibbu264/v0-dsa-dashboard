@@ -1,13 +1,14 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback, useMemo, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { ExternalLink, Eye, Loader2, CheckCircle, Clock, RefreshCw, Shuffle } from "lucide-react"
+import { ExternalLink, Eye, Loader2, CheckCircle, Clock, RefreshCw, Shuffle, Search } from "lucide-react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { SheetConfig } from "@/components/sheet-config"
+import { Input } from "@/components/ui/input"
 
 interface DSAQuestion {
   name: string
@@ -33,6 +34,16 @@ export function DSADashboard() {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [localStatuses, setLocalStatuses] = useState<Record<string, string>>({})
   const [highlightedQuestion, setHighlightedQuestion] = useState<string | null>(null)
+  const [searchQuery, setSearchQuery] = useState("")
+  const [searchLoading, setSearchLoading] = useState(false)
+  const [currentQuestion, setCurrentQuestion] = useState<DSAQuestion | null>(null)
+  const [searchResults, setSearchResults] = useState<{
+    suggestedQuestion: string | null
+    explanation: string
+    alternativeMatches: string[]
+  } | null>(null)
+  const [showSearchResults, setShowSearchResults] = useState(false)
+  const searchRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const saved = localStorage.getItem("dsa-question-statuses")
@@ -48,6 +59,32 @@ export function DSADashboard() {
   useEffect(() => {
     fetchQuestions()
   }, [])
+
+  // Cleanup dialog state when dialog closes
+  useEffect(() => {
+    if (!isDialogOpen) {
+      // Small delay to allow dialog close animation
+      const timer = setTimeout(() => {
+        setSelectedSolution(null)
+        setCurrentQuestion(null)
+      }, 200)
+      return () => clearTimeout(timer)
+    }
+  }, [isDialogOpen])
+
+  // Close search results when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+        setShowSearchResults(false)
+      }
+    }
+
+    if (showSearchResults) {
+      document.addEventListener('mousedown', handleClickOutside)
+      return () => document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [showSearchResults])
 
   const fetchQuestions = async () => {
     try {
@@ -112,8 +149,10 @@ export function DSADashboard() {
     return localStatuses[question.name] || question.status
   }
 
-  const fetchSolution = async (question: DSAQuestion) => {
+  const fetchSolution = useCallback(async (question: DSAQuestion) => {
     setLoadingSolution(true)
+    setCurrentQuestion(question)
+    setSelectedSolution(null) // Clear previous solution for better UX
     setIsDialogOpen(true)
 
     try {
@@ -147,7 +186,76 @@ export function DSADashboard() {
     } finally {
       setLoadingSolution(false)
     }
-  }
+  }, [])
+
+  const handleSearch = useCallback(async (query: string) => {
+    if (!query.trim()) {
+      setSearchQuery("")
+      setSearchResults(null)
+      setShowSearchResults(false)
+      return
+    }
+
+    setSearchLoading(true)
+    setSearchQuery(query)
+
+    try {
+      const response = await fetch("/api/search-questions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          query: query.trim(),
+          questions: questions.map(q => ({
+            name: q.name,
+            topic: q.topic,
+            platform: q.platform
+          }))
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to search questions")
+      }
+
+      const searchResult = await response.json()
+      setSearchResults(searchResult)
+      setShowSearchResults(true)
+    } catch (error) {
+      console.error("Error searching questions:", error)
+      setSearchResults({
+        suggestedQuestion: null,
+        explanation: "Error searching questions. Please try again.",
+        alternativeMatches: []
+      })
+      setShowSearchResults(true)
+    } finally {
+      setSearchLoading(false)
+    }
+  }, [questions])
+
+  const scrollToQuestion = useCallback((questionName: string) => {
+    const foundQuestion = questions.find(q => q.name === questionName)
+    if (foundQuestion) {
+      setHighlightedQuestion(foundQuestion.name)
+      const questionIndex = questions.findIndex(q => q.name === foundQuestion.name)
+      setTimeout(() => {
+        const element = document.getElementById(`question-${questionIndex}`)
+        if (element) {
+          element.scrollIntoView({ behavior: "smooth", block: "center" })
+        }
+      }, 100)
+      
+      setTimeout(() => {
+        setHighlightedQuestion(null)
+      }, 5000)
+      
+      // Hide search results after clicking
+      setShowSearchResults(false)
+      setSearchQuery("")
+    }
+  }, [questions])
 
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
@@ -253,24 +361,107 @@ export function DSADashboard() {
   const pendingCount = questions.filter((q) => getEffectiveStatus(q).toLowerCase() === "pending").length
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <div className="text-sm text-muted-foreground">
-            Total: {questions.length} | Solved:{" "}
-            {questions.filter((q) => getEffectiveStatus(q).toLowerCase() === "solved").length} | Pending:{" "}
-            {questions.filter((q) => getEffectiveStatus(q).toLowerCase() === "pending").length}
+    <div className="space-y-6 p-6">
+      <div className="flex flex-col gap-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="text-sm text-muted-foreground">
+              Total: {questions.length} | Solved:{" "}
+              {questions.filter((q) => getEffectiveStatus(q).toLowerCase() === "solved").length} | Pending:{" "}
+              {questions.filter((q) => getEffectiveStatus(q).toLowerCase() === "pending").length}
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <SheetConfig onSheetUrlChange={handleSheetUrlChange} />
+            <Button variant="outline" size="sm" onClick={pickRandomPendingQuestion} disabled={pendingCount === 0}>
+              <Shuffle className="h-4 w-4 mr-2" />
+              Pick Random ({pendingCount})
+            </Button>
+            <Button variant="outline" size="sm" onClick={fetchQuestions}>
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Refresh
+            </Button>
           </div>
         </div>
+        
         <div className="flex items-center gap-2">
-          <SheetConfig onSheetUrlChange={handleSheetUrlChange} />
-          <Button variant="outline" size="sm" onClick={pickRandomPendingQuestion} disabled={pendingCount === 0}>
-            <Shuffle className="h-4 w-4 mr-2" />
-            Pick Random ({pendingCount})
-          </Button>
-          <Button variant="outline" size="sm" onClick={fetchQuestions}>
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Refresh
+          <div ref={searchRef} className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+            <Input
+              placeholder="Search by question type or topic (e.g., 'binary search', 'dynamic programming')..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  handleSearch(searchQuery)
+                }
+              }}
+              className="pl-10"
+            />
+            
+            {/* Search Results Dropdown */}
+            {showSearchResults && searchResults && (
+              <div className="absolute top-full left-0 right-0 mt-1 bg-background border rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto">
+                <div className="p-3 border-b">
+                  <p className="text-sm text-muted-foreground">{searchResults.explanation}</p>
+                </div>
+                
+                {searchResults.suggestedQuestion && (
+                  <div className="p-2">
+                    <button
+                      onClick={() => scrollToQuestion(searchResults.suggestedQuestion!)}
+                      className="w-full text-left p-2 hover:bg-accent rounded-md transition-colors"
+                    >
+                      <div className="font-medium text-sm">{searchResults.suggestedQuestion}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {(() => {
+                          const question = questions.find(q => q.name === searchResults.suggestedQuestion)
+                          return question ? `${question.topic} • ${question.platform}` : 'Click to scroll to question'
+                        })()}
+                      </div>
+                    </button>
+                  </div>
+                )}
+                
+                {searchResults.alternativeMatches && searchResults.alternativeMatches.length > 0 && (
+                  <div className="p-2 border-t">
+                    <div className="text-xs font-medium text-muted-foreground mb-2 px-2">Other matches:</div>
+                    {searchResults.alternativeMatches.map((questionName, index) => (
+                      <button
+                        key={index}
+                        onClick={() => scrollToQuestion(questionName)}
+                        className="w-full text-left p-2 hover:bg-accent rounded-md transition-colors"
+                      >
+                        <div className="font-medium text-sm">{questionName}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {(() => {
+                            const question = questions.find(q => q.name === questionName)
+                            return question ? `${question.topic} • ${question.platform}` : 'Click to scroll to question'
+                          })()}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                
+                {!searchResults.suggestedQuestion && searchResults.alternativeMatches.length === 0 && (
+                  <div className="p-4 text-center text-sm text-muted-foreground">
+                    No matching questions found. Try different keywords.
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+          <Button 
+            onClick={() => handleSearch(searchQuery)}
+            disabled={searchLoading || !searchQuery.trim()}
+            size="sm"
+          >
+            {searchLoading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Search className="h-4 w-4" />
+            )}
           </Button>
         </div>
       </div>
@@ -324,72 +515,74 @@ export function DSADashboard() {
                     </div>
                   </div>
 
-                  <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                    <DialogTrigger asChild>
-                      <Button onClick={() => fetchSolution(question)} className="ml-4">
-                        <Eye className="h-4 w-4 mr-2" />
-                        View Solution
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="max-w-4xl max-h-[80vh]">
-                      <DialogHeader>
-                        <DialogTitle>Solution: {question.name}</DialogTitle>
-                      </DialogHeader>
-
-                      {loadingSolution ? (
-                        <div className="flex items-center justify-center py-8">
-                          <Loader2 className="h-8 w-8 animate-spin" />
-                          <span className="ml-2">Fetching solution from Gemini...</span>
-                        </div>
-                      ) : selectedSolution ? (
-                        <ScrollArea className="h-[60vh]">
-                          <div className="space-y-6 pr-4">
-                            <div>
-                              <h4 className="font-semibold mb-2">Question Link</h4>
-                              <a
-                                href={selectedSolution.questionLink}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
-                              >
-                                {selectedSolution.questionLink}
-                              </a>
-                            </div>
-
-                            <div>
-                              <h4 className="font-semibold mb-2">Brief Description</h4>
-                              <p className="text-muted-foreground">{selectedSolution.description}</p>
-                            </div>
-
-                            <div>
-                              <h4 className="font-semibold mb-2">Input-Output Example</h4>
-                              <pre className="bg-muted p-4 rounded-lg text-sm overflow-x-auto">
-                                {selectedSolution.inputOutput}
-                              </pre>
-                            </div>
-
-                            <div>
-                              <h4 className="font-semibold mb-2">Approach</h4>
-                              <p className="text-muted-foreground whitespace-pre-line">{selectedSolution.approach}</p>
-                            </div>
-
-                            <div>
-                              <h4 className="font-semibold mb-2">Solution in C++</h4>
-                              <pre className="bg-muted p-4 rounded-lg text-sm overflow-x-auto">
-                                <code>{selectedSolution.cppSolution}</code>
-                              </pre>
-                            </div>
-                          </div>
-                        </ScrollArea>
-                      ) : null}
-                    </DialogContent>
-                  </Dialog>
+                  <Button onClick={() => fetchSolution(question)} className="ml-4">
+                    <Eye className="h-4 w-4 mr-2" />
+                    View Solution
+                  </Button>
                 </div>
               </CardContent>
             </Card>
           )
         })}
       </div>
+
+      {/* Optimized Dialog - Single instance for better performance */}
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[80vh]">
+          <DialogHeader>
+            <DialogTitle>
+              Solution: {currentQuestion?.name || "Loading..."}
+            </DialogTitle>
+          </DialogHeader>
+
+          {loadingSolution ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin" />
+              <span className="ml-2">Fetching solution from Gemini...</span>
+            </div>
+          ) : selectedSolution ? (
+            <ScrollArea className="h-[60vh]">
+              <div className="space-y-6 pr-4">
+                <div>
+                  <h4 className="font-semibold mb-2">Question Link</h4>
+                  <a
+                    href={selectedSolution.questionLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                  >
+                    {selectedSolution.questionLink}
+                  </a>
+                </div>
+
+                <div>
+                  <h4 className="font-semibold mb-2">Brief Description</h4>
+                  <p className="text-muted-foreground">{selectedSolution.description}</p>
+                </div>
+
+                <div>
+                  <h4 className="font-semibold mb-2">Input-Output Example</h4>
+                  <pre className="bg-muted p-4 rounded-lg text-sm overflow-x-auto">
+                    {selectedSolution.inputOutput}
+                  </pre>
+                </div>
+
+                <div>
+                  <h4 className="font-semibold mb-2">Approach</h4>
+                  <p className="text-muted-foreground whitespace-pre-line">{selectedSolution.approach}</p>
+                </div>
+
+                <div>
+                  <h4 className="font-semibold mb-2">Solution in C++</h4>
+                  <pre className="bg-muted p-4 rounded-lg text-sm overflow-x-auto">
+                    <code>{selectedSolution.cppSolution}</code>
+                  </pre>
+                </div>
+              </div>
+            </ScrollArea>
+          ) : null}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
