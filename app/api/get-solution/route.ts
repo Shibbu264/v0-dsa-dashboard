@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
     `
 
     const { text } = await generateText({
-      model: google("gemini-1.5-flash"),
+      model: google("gemini-pro"),
       prompt: prompt,
       temperature: 0.3,
     })
