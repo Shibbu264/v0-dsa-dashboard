@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
     `
 
     const { text } = await generateText({
-      model: google("gemini-pro"),
+      model: google("gemini-1.5-flash"),
       prompt: prompt,
       temperature: 0.3,
       maxTokens: 500,
