@@ -600,7 +600,7 @@ export function DSADashboard() {
   const pendingCount = questions.filter((q) => getEffectiveStatus(q).toLowerCase() === "pending").length
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-4 sm:space-y-6 p-2 sm:p-6">
       {/* Manual update notice */}
       {appsScriptUrl ? (
         <div className="bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
@@ -646,8 +646,8 @@ export function DSADashboard() {
 
       {/* Built by section */}
       <div className="flex justify-center">
-        <div className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/20 dark:to-purple-950/20 rounded-full border border-blue-200 dark:border-blue-800">
-          <div className="flex items-center gap-1 text-sm text-muted-foreground">
+        <div className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/20 dark:to-purple-950/20 rounded-full border border-blue-200 dark:border-blue-800">
+          <div className="flex items-center gap-1 text-xs sm:text-sm text-muted-foreground">
             <span>Vibecoded by</span>
             <a
               href="https://github.com/Shibbu264"
@@ -655,57 +655,93 @@ export function DSADashboard() {
               rel="noopener noreferrer"
               className="flex items-center gap-1 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium transition-colors"
             >
-              <Github className="h-4 w-4" />
-              Shibbu264
+              <Github className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Shibbu264</span>
+              <span className="sm:hidden">Shibbu</span>
             </a>
           </div>
         </div>
       </div>
 
       <div className="flex flex-col gap-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="text-sm text-muted-foreground">
-              Total: {questions.length} | Solved:{" "}
-              {questions.filter((q) => getEffectiveStatus(q).toLowerCase() === "solved").length} | Pending:{" "}
-              {questions.filter((q) => getEffectiveStatus(q).toLowerCase() === "pending").length}
+        {/* Stats and Controls */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="text-xs sm:text-sm text-muted-foreground">
+            <div className="flex flex-wrap gap-2">
+              <span>Total: {questions.length}</span>
+              <span>•</span>
+              <span>Solved: {questions.filter((q) => getEffectiveStatus(q).toLowerCase() === "solved").length}</span>
+              <span>•</span>
+              <span>Pending: {questions.filter((q) => getEffectiveStatus(q).toLowerCase() === "pending").length}</span>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <SheetConfig onSheetUrlChange={handleSheetUrlChange} />
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={() => setShowAppsScriptSettings(true)}
-              title="Configure Apps Script URL"
-            >
-              <Settings className="h-4 w-4 mr-2" />
-              Apps Script
-            </Button>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={() => setIsAddQuestionDialogOpen(true)}
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Add Question
-            </Button>
-            <Button variant="outline" size="sm" onClick={pickRandomPendingQuestion} disabled={pendingCount === 0}>
-              <Shuffle className="h-4 w-4 mr-2" />
-              Pick Random ({pendingCount})
-            </Button>
-            <Button variant="outline" size="sm" onClick={fetchQuestions}>
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Refresh
-            </Button>
+          
+          {/* Mobile: Stack buttons vertically, Desktop: Horizontal */}
+          <div className="flex flex-col sm:flex-row gap-2">
+            <div className="flex flex-wrap gap-2">
+              <SheetConfig onSheetUrlChange={handleSheetUrlChange} />
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => setShowAppsScriptSettings(true)}
+                title="Configure Apps Script URL"
+                className="hidden sm:flex"
+              >
+                <Settings className="h-4 w-4 mr-2" />
+                Apps Script
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => setShowAppsScriptSettings(true)}
+                title="Configure Apps Script URL"
+                className="sm:hidden"
+              >
+                <Settings className="h-4 w-4" />
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => setIsAddQuestionDialogOpen(true)}
+                className="hidden sm:flex"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add Question
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => setIsAddQuestionDialogOpen(true)}
+                className="sm:hidden"
+              >
+                <Plus className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button variant="outline" size="sm" onClick={pickRandomPendingQuestion} disabled={pendingCount === 0} className="hidden sm:flex">
+                <Shuffle className="h-4 w-4 mr-2" />
+                Pick Random ({pendingCount})
+              </Button>
+              <Button variant="outline" size="sm" onClick={pickRandomPendingQuestion} disabled={pendingCount === 0} className="sm:hidden">
+                <Shuffle className="h-4 w-4" />
+                <span className="ml-1">({pendingCount})</span>
+              </Button>
+              <Button variant="outline" size="sm" onClick={fetchQuestions} className="hidden sm:flex">
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Refresh
+              </Button>
+              <Button variant="outline" size="sm" onClick={fetchQuestions} className="sm:hidden">
+                <RefreshCw className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
         </div>
         
-        <div className="flex items-center gap-2">
-          <div ref={searchRef} className="relative flex-1 max-w-md">
+        <div className="flex flex-col sm:flex-row gap-2">
+          <div ref={searchRef} className="relative flex-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
             <Input
-              placeholder="Search by question type or topic (e.g., 'binary search', 'dynamic programming')..."
+              placeholder="Search by question type or topic..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyDown={(e) => {
@@ -773,33 +809,41 @@ export function DSADashboard() {
             onClick={() => handleSearch(searchQuery)}
             disabled={searchLoading || !searchQuery.trim()}
             size="sm"
+            className="w-full sm:w-auto"
           >
             {searchLoading ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
               <Search className="h-4 w-4" />
             )}
+            <span className="ml-2 sm:hidden">Search</span>
           </Button>
         </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="all" className="flex items-center gap-2">
-            All ({questions.length})
+        <TabsList className="grid w-full grid-cols-3 h-auto">
+          <TabsTrigger value="all" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm py-2 px-2 sm:px-3">
+            <span className="hidden sm:inline">All</span>
+            <span className="sm:hidden">All</span>
+            <span className="text-xs">({questions.length})</span>
           </TabsTrigger>
-          <TabsTrigger value="solved" className="flex items-center gap-2">
-            <CheckCircle className="h-4 w-4" />
-            Solved ({questions.filter(q => getEffectiveStatus(q).toLowerCase() === "solved").length})
+          <TabsTrigger value="solved" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm py-2 px-2 sm:px-3">
+            <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4" />
+            <span className="hidden sm:inline">Solved</span>
+            <span className="sm:hidden">Sol</span>
+            <span className="text-xs">({questions.filter(q => getEffectiveStatus(q).toLowerCase() === "solved").length})</span>
           </TabsTrigger>
-          <TabsTrigger value="pending" className="flex items-center gap-2">
-            <Clock className="h-4 w-4" />
-            Pending ({questions.filter(q => getEffectiveStatus(q).toLowerCase() === "pending").length})
+          <TabsTrigger value="pending" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm py-2 px-2 sm:px-3">
+            <Clock className="h-3 w-3 sm:h-4 sm:w-4" />
+            <span className="hidden sm:inline">Pending</span>
+            <span className="sm:hidden">Pen</span>
+            <span className="text-xs">({questions.filter(q => getEffectiveStatus(q).toLowerCase() === "pending").length})</span>
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="all" className="mt-6">
-          <div className="grid gap-4">
+        <TabsContent value="all" className="mt-4 sm:mt-6">
+          <div className="grid gap-3 sm:gap-4">
             {sortedQuestions.map((question, index) => {
               const effectiveStatus = getEffectiveStatus(question)
               const effectivePinned = getEffectivePinned(question)
@@ -813,57 +857,64 @@ export function DSADashboard() {
                     isHighlighted ? "ring-2 ring-blue-500 shadow-lg bg-blue-50 dark:bg-blue-950/20" : ""
                   } ${effectivePinned ? "border-l-4 border-l-yellow-500" : ""}`}
                 >
-                  <CardContent className="p-6">
-                    <div className="flex items-center justify-between">
+                  <CardContent className="p-3 sm:p-6">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                       <div className="flex-1 space-y-2">
-                        <div className="flex items-center gap-3">
-                          <div 
-                            className="flex items-center gap-1 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 rounded p-1 transition-colors" 
-                            title={`Click to toggle pinned status`}
-                            onClick={() => togglePinned(question.name, effectivePinned)}
-                          >
-                            {effectivePinned ? (
-                              <Pin className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
-                            ) : (
-                              <PinOff className="h-4 w-4 text-gray-400" />
-                            )}
-                          </div>
-                          <h3 className="text-lg font-semibold text-foreground">{question.name}</h3>
-                          <Badge variant="outline">{question.platform}</Badge>
-                          <Badge 
-                            className={`${getStatusColor(effectiveStatus)} cursor-pointer hover:opacity-80 transition-opacity`}
-                            title={`Click to toggle status`}
-                            onClick={() => toggleStatus(question.name, effectiveStatus)}
-                          >
-                            <div className="flex items-center gap-1">
-                              {getStatusIcon(effectiveStatus)}
-                              {effectiveStatus}
+                        {/* Mobile: Stack title and badges vertically, Desktop: Horizontal */}
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                          <div className="flex items-center gap-2">
+                            <div 
+                              className="flex items-center gap-1 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 rounded p-1 transition-colors" 
+                              title={`Click to toggle pinned status`}
+                              onClick={() => togglePinned(question.name, effectivePinned)}
+                            >
+                              {effectivePinned ? (
+                                <Pin className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
+                              ) : (
+                                <PinOff className="h-4 w-4 text-gray-400" />
+                              )}
                             </div>
-                          </Badge>
+                            <h3 className="text-base sm:text-lg font-semibold text-foreground line-clamp-2">{question.name}</h3>
+                          </div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <Badge variant="outline" className="text-xs">{question.platform}</Badge>
+                            <Badge 
+                              className={`${getStatusColor(effectiveStatus)} cursor-pointer hover:opacity-80 transition-opacity text-xs`}
+                              title={`Click to toggle status`}
+                              onClick={() => toggleStatus(question.name, effectiveStatus)}
+                            >
+                              <div className="flex items-center gap-1">
+                                {getStatusIcon(effectiveStatus)}
+                                <span className="hidden sm:inline">{effectiveStatus}</span>
+                                <span className="sm:hidden">{effectiveStatus.charAt(0)}</span>
+                              </div>
+                            </Badge>
+                          </div>
                         </div>
 
                         {question.topic && (
-                          <p className="text-sm text-muted-foreground">
+                          <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2">
                             <span className="font-medium">Topic:</span> {question.topic}
                           </p>
                         )}
 
                         <div className="flex items-center gap-2">
-                          <ExternalLink className="h-4 w-4 text-muted-foreground" />
+                          <ExternalLink className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
                           <a
                             href={question.link}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                            className="text-xs sm:text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
                           >
                             View Problem
                           </a>
                         </div>
                       </div>
 
-                      <Button onClick={() => fetchSolution(question)} className="ml-4">
+                      <Button onClick={() => fetchSolution(question)} className="w-full sm:w-auto">
                         <Eye className="h-4 w-4 mr-2" />
-                        View Solution
+                        <span className="hidden sm:inline">View Solution</span>
+                        <span className="sm:hidden">Solution</span>
                       </Button>
                     </div>
                   </CardContent>
@@ -873,8 +924,8 @@ export function DSADashboard() {
           </div>
         </TabsContent>
 
-        <TabsContent value="solved" className="mt-6">
-          <div className="grid gap-4">
+        <TabsContent value="solved" className="mt-4 sm:mt-6">
+          <div className="grid gap-3 sm:gap-4">
             {sortedQuestions.map((question, index) => {
               const effectiveStatus = getEffectiveStatus(question)
               const effectivePinned = getEffectivePinned(question)
@@ -888,57 +939,63 @@ export function DSADashboard() {
                     isHighlighted ? "ring-2 ring-blue-500 shadow-lg bg-blue-50 dark:bg-blue-950/20" : ""
                   } ${effectivePinned ? "border-l-4 border-l-yellow-500" : ""}`}
                 >
-                  <CardContent className="p-6">
-                    <div className="flex items-center justify-between">
+                  <CardContent className="p-3 sm:p-6">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                       <div className="flex-1 space-y-2">
-                        <div className="flex items-center gap-3">
-                          <div 
-                            className="flex items-center gap-1 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 rounded p-1 transition-colors" 
-                            title={`Click to toggle pinned status`}
-                            onClick={() => togglePinned(question.name, effectivePinned)}
-                          >
-                            {effectivePinned ? (
-                              <Pin className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
-                            ) : (
-                              <PinOff className="h-4 w-4 text-gray-400" />
-                            )}
-                          </div>
-                          <h3 className="text-lg font-semibold text-foreground">{question.name}</h3>
-                          <Badge variant="outline">{question.platform}</Badge>
-                          <Badge 
-                            className={`${getStatusColor(effectiveStatus)} cursor-pointer hover:opacity-80 transition-opacity`}
-                            title={`Click to toggle status`}
-                            onClick={() => toggleStatus(question.name, effectiveStatus)}
-                          >
-                            <div className="flex items-center gap-1">
-                              {getStatusIcon(effectiveStatus)}
-                              {effectiveStatus}
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                          <div className="flex items-center gap-2">
+                            <div 
+                              className="flex items-center gap-1 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 rounded p-1 transition-colors" 
+                              title={`Click to toggle pinned status`}
+                              onClick={() => togglePinned(question.name, effectivePinned)}
+                            >
+                              {effectivePinned ? (
+                                <Pin className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
+                              ) : (
+                                <PinOff className="h-4 w-4 text-gray-400" />
+                              )}
                             </div>
-                          </Badge>
+                            <h3 className="text-base sm:text-lg font-semibold text-foreground line-clamp-2">{question.name}</h3>
+                          </div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <Badge variant="outline" className="text-xs">{question.platform}</Badge>
+                            <Badge 
+                              className={`${getStatusColor(effectiveStatus)} cursor-pointer hover:opacity-80 transition-opacity text-xs`}
+                              title={`Click to toggle status`}
+                              onClick={() => toggleStatus(question.name, effectiveStatus)}
+                            >
+                              <div className="flex items-center gap-1">
+                                {getStatusIcon(effectiveStatus)}
+                                <span className="hidden sm:inline">{effectiveStatus}</span>
+                                <span className="sm:hidden">{effectiveStatus.charAt(0)}</span>
+                              </div>
+                            </Badge>
+                          </div>
                         </div>
 
                         {question.topic && (
-                          <p className="text-sm text-muted-foreground">
+                          <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2">
                             <span className="font-medium">Topic:</span> {question.topic}
                           </p>
                         )}
 
                         <div className="flex items-center gap-2">
-                          <ExternalLink className="h-4 w-4 text-muted-foreground" />
+                          <ExternalLink className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
                           <a
                             href={question.link}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                            className="text-xs sm:text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
                           >
                             View Problem
                           </a>
                         </div>
                       </div>
 
-                      <Button onClick={() => fetchSolution(question)} className="ml-4">
+                      <Button onClick={() => fetchSolution(question)} className="w-full sm:w-auto">
                         <Eye className="h-4 w-4 mr-2" />
-                        View Solution
+                        <span className="hidden sm:inline">View Solution</span>
+                        <span className="sm:hidden">Solution</span>
                       </Button>
                     </div>
                   </CardContent>
@@ -948,8 +1005,8 @@ export function DSADashboard() {
           </div>
         </TabsContent>
 
-        <TabsContent value="pending" className="mt-6">
-          <div className="grid gap-4">
+        <TabsContent value="pending" className="mt-4 sm:mt-6">
+          <div className="grid gap-3 sm:gap-4">
             {sortedQuestions.map((question, index) => {
               const effectiveStatus = getEffectiveStatus(question)
               const effectivePinned = getEffectivePinned(question)
@@ -963,57 +1020,63 @@ export function DSADashboard() {
                     isHighlighted ? "ring-2 ring-blue-500 shadow-lg bg-blue-50 dark:bg-blue-950/20" : ""
                   } ${effectivePinned ? "border-l-4 border-l-yellow-500" : ""}`}
                 >
-                  <CardContent className="p-6">
-                    <div className="flex items-center justify-between">
+                  <CardContent className="p-3 sm:p-6">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                       <div className="flex-1 space-y-2">
-                        <div className="flex items-center gap-3">
-                          <div 
-                            className="flex items-center gap-1 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 rounded p-1 transition-colors" 
-                            title={`Click to toggle pinned status`}
-                            onClick={() => togglePinned(question.name, effectivePinned)}
-                          >
-                            {effectivePinned ? (
-                              <Pin className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
-                            ) : (
-                              <PinOff className="h-4 w-4 text-gray-400" />
-                            )}
-                          </div>
-                          <h3 className="text-lg font-semibold text-foreground">{question.name}</h3>
-                          <Badge variant="outline">{question.platform}</Badge>
-                          <Badge 
-                            className={`${getStatusColor(effectiveStatus)} cursor-pointer hover:opacity-80 transition-opacity`}
-                            title={`Click to toggle status`}
-                            onClick={() => toggleStatus(question.name, effectiveStatus)}
-                          >
-                            <div className="flex items-center gap-1">
-                              {getStatusIcon(effectiveStatus)}
-                              {effectiveStatus}
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                          <div className="flex items-center gap-2">
+                            <div 
+                              className="flex items-center gap-1 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 rounded p-1 transition-colors" 
+                              title={`Click to toggle pinned status`}
+                              onClick={() => togglePinned(question.name, effectivePinned)}
+                            >
+                              {effectivePinned ? (
+                                <Pin className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
+                              ) : (
+                                <PinOff className="h-4 w-4 text-gray-400" />
+                              )}
                             </div>
-                          </Badge>
+                            <h3 className="text-base sm:text-lg font-semibold text-foreground line-clamp-2">{question.name}</h3>
+                          </div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <Badge variant="outline" className="text-xs">{question.platform}</Badge>
+                            <Badge 
+                              className={`${getStatusColor(effectiveStatus)} cursor-pointer hover:opacity-80 transition-opacity text-xs`}
+                              title={`Click to toggle status`}
+                              onClick={() => toggleStatus(question.name, effectiveStatus)}
+                            >
+                              <div className="flex items-center gap-1">
+                                {getStatusIcon(effectiveStatus)}
+                                <span className="hidden sm:inline">{effectiveStatus}</span>
+                                <span className="sm:hidden">{effectiveStatus.charAt(0)}</span>
+                              </div>
+                            </Badge>
+                          </div>
                         </div>
 
                         {question.topic && (
-                          <p className="text-sm text-muted-foreground">
+                          <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2">
                             <span className="font-medium">Topic:</span> {question.topic}
                           </p>
                         )}
 
                         <div className="flex items-center gap-2">
-                          <ExternalLink className="h-4 w-4 text-muted-foreground" />
+                          <ExternalLink className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
                           <a
                             href={question.link}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                            className="text-xs sm:text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
                           >
                             View Problem
                           </a>
                         </div>
                       </div>
 
-                      <Button onClick={() => fetchSolution(question)} className="ml-4">
+                      <Button onClick={() => fetchSolution(question)} className="w-full sm:w-auto">
                         <Eye className="h-4 w-4 mr-2" />
-                        View Solution
+                        <span className="hidden sm:inline">View Solution</span>
+                        <span className="sm:hidden">Solution</span>
                       </Button>
                     </div>
                   </CardContent>
@@ -1026,53 +1089,53 @@ export function DSADashboard() {
 
       {/* Optimized Dialog - Single instance for better performance */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[80vh]">
+        <DialogContent className="max-w-4xl max-h-[80vh] w-[95vw] sm:w-full">
           <DialogHeader>
-            <DialogTitle>
+            <DialogTitle className="text-sm sm:text-base">
               Solution: {currentQuestion?.name || "Loading..."}
             </DialogTitle>
           </DialogHeader>
 
           {loadingSolution ? (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-8 w-8 animate-spin" />
-              <span className="ml-2">Fetching solution from Gemini...</span>
+            <div className="flex flex-col sm:flex-row items-center justify-center py-8 gap-2">
+              <Loader2 className="h-6 w-6 sm:h-8 sm:w-8 animate-spin" />
+              <span className="text-sm sm:text-base text-center">Fetching solution from Gemini...</span>
             </div>
           ) : selectedSolution ? (
             <ScrollArea className="h-[60vh]">
-              <div className="space-y-6 pr-4">
+              <div className="space-y-4 sm:space-y-6 pr-2 sm:pr-4">
                 <div>
-                  <h4 className="font-semibold mb-2">Question Link</h4>
+                  <h4 className="font-semibold mb-2 text-sm sm:text-base">Question Link</h4>
                   <a
                     href={selectedSolution.questionLink}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                    className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-xs sm:text-sm break-all"
                   >
                     {selectedSolution.questionLink}
                   </a>
                 </div>
 
                 <div>
-                  <h4 className="font-semibold mb-2">Brief Description</h4>
-                  <p className="text-muted-foreground">{selectedSolution.description}</p>
+                  <h4 className="font-semibold mb-2 text-sm sm:text-base">Brief Description</h4>
+                  <p className="text-muted-foreground text-xs sm:text-sm">{selectedSolution.description}</p>
                 </div>
 
                 <div>
-                  <h4 className="font-semibold mb-2">Input-Output Example</h4>
-                  <pre className="bg-muted p-4 rounded-lg text-sm overflow-x-auto">
+                  <h4 className="font-semibold mb-2 text-sm sm:text-base">Input-Output Example</h4>
+                  <pre className="bg-muted p-2 sm:p-4 rounded-lg text-xs sm:text-sm overflow-x-auto">
                     {selectedSolution.inputOutput}
                   </pre>
                 </div>
 
                 <div>
-                  <h4 className="font-semibold mb-2">Approach</h4>
-                  <p className="text-muted-foreground whitespace-pre-line">{selectedSolution.approach}</p>
+                  <h4 className="font-semibold mb-2 text-sm sm:text-base">Approach</h4>
+                  <p className="text-muted-foreground whitespace-pre-line text-xs sm:text-sm">{selectedSolution.approach}</p>
                 </div>
 
                 <div>
-                  <h4 className="font-semibold mb-2">Solution in C++</h4>
-                  <pre className="bg-muted p-4 rounded-lg text-sm overflow-x-auto">
+                  <h4 className="font-semibold mb-2 text-sm sm:text-base">Solution in C++</h4>
+                  <pre className="bg-muted p-2 sm:p-4 rounded-lg text-xs sm:text-sm overflow-x-auto">
                     <code>{selectedSolution.cppSolution}</code>
                   </pre>
                 </div>
@@ -1084,21 +1147,21 @@ export function DSADashboard() {
 
       {/* Add Question Dialog */}
       <Dialog open={isAddQuestionDialogOpen} onOpenChange={setIsAddQuestionDialogOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl w-[95vw] sm:w-full">
           <DialogHeader>
-            <DialogTitle>Add New Question</DialogTitle>
+            <DialogTitle className="text-sm sm:text-base">Add New Question</DialogTitle>
           </DialogHeader>
           
           <div className="space-y-4">
             <div>
-              <label className="text-sm font-medium mb-2 block">
+              <label className="text-xs sm:text-sm font-medium mb-2 block">
                 Question Link or Description
               </label>
               <Input
                 placeholder="Enter LeetCode/Codeforces link or describe the problem..."
                 value={questionInput}
                 onChange={(e) => setQuestionInput(e.target.value)}
-                className="w-full"
+                className="w-full text-xs sm:text-sm"
               />
               <p className="text-xs text-muted-foreground mt-1">
                 You can paste a LeetCode/Codeforces URL or just describe the problem. Our AI will generate all the details.
@@ -1107,19 +1170,21 @@ export function DSADashboard() {
               </p>
             </div>
             
-            <div className="flex justify-end gap-2">
+            <div className="flex flex-col sm:flex-row justify-end gap-2">
               <Button 
                 variant="outline" 
                 onClick={() => {
                   setIsAddQuestionDialogOpen(false)
                   setQuestionInput("")
                 }}
+                className="w-full sm:w-auto"
               >
                 Cancel
               </Button>
               <Button 
                 onClick={handleAddQuestion}
                 disabled={addingQuestion || !questionInput.trim()}
+                className="w-full sm:w-auto"
               >
                 {addingQuestion ? (
                   <>
@@ -1140,19 +1205,19 @@ export function DSADashboard() {
 
       {/* Auto-shown Configuration Dialog when no sheet URL exists */}
       <Dialog open={showConfigDialog} onOpenChange={setShowConfigDialog}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl w-[95vw] sm:w-full">
           <DialogHeader>
-            <DialogTitle>Configure Your DSA Sheet</DialogTitle>
+            <DialogTitle className="text-sm sm:text-base">Configure Your DSA Sheet</DialogTitle>
           </DialogHeader>
           
-          <div className="space-y-6">
-            <div className="bg-blue-50 dark:bg-blue-950/20 p-4 rounded-lg">
-              <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-2">
+          <div className="space-y-4 sm:space-y-6">
+            <div className="bg-blue-50 dark:bg-blue-950/20 p-3 sm:p-4 rounded-lg">
+              <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-2 text-sm sm:text-base">
                 📋 Setup Instructions
               </h4>
-              <div className="text-sm text-blue-800 dark:text-blue-200 space-y-2">
+              <div className="text-xs sm:text-sm text-blue-800 dark:text-blue-200 space-y-2">
                 <p>To get started, you need to create your own copy of the DSA questions sheet:</p>
-                <ol className="list-decimal list-inside space-y-1 ml-4">
+                <ol className="list-decimal list-inside space-y-1 ml-2 sm:ml-4">
                   <li>Click the link below to open the template sheet</li>
                   <li>Click "File" → "Make a copy" to create your own copy</li>
                   <li>Make sure your copy is set to "Anyone with the link can view"</li>
@@ -1162,12 +1227,12 @@ export function DSADashboard() {
             </div>
 
             <div className="flex items-center gap-2 p-3 bg-muted rounded-lg">
-              <ExternalLink className="h-4 w-4 text-muted-foreground" />
+              <ExternalLink className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
               <a
                 href="https://docs.google.com/spreadsheets/d/1M0NOBIbt0A6OmJvIKYmYU0d8ODaTEVmzenhGOLizhbg/edit?usp=sharing"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium"
+                className="text-xs sm:text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium break-all"
               >
                 Open Template Sheet →
               </a>
@@ -1180,13 +1245,13 @@ export function DSADashboard() {
 
       {/* Apps Script Settings Dialog */}
       <Dialog open={showAppsScriptSettings} onOpenChange={setShowAppsScriptSettings}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md w-[95vw] sm:w-full">
           <DialogHeader>
-            <DialogTitle>Configure Apps Script URL</DialogTitle>
+            <DialogTitle className="text-sm sm:text-base">Configure Apps Script URL</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <label htmlFor="apps-script-url" className="text-sm font-medium">
+              <label htmlFor="apps-script-url" className="text-xs sm:text-sm font-medium">
                 Apps Script Web App URL
               </label>
               <Input
@@ -1195,7 +1260,7 @@ export function DSADashboard() {
                 placeholder="https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec"
                 value={appsScriptUrl}
                 onChange={(e) => setAppsScriptUrl(e.target.value)}
-                className="mt-1"
+                className="mt-1 text-xs sm:text-sm"
               />
               <p className="text-xs text-muted-foreground mt-1">
                 Enter your deployed Apps Script web app URL for full automation
@@ -1203,7 +1268,7 @@ export function DSADashboard() {
             </div>
             
             <div className="bg-blue-50 dark:bg-blue-950/20 p-3 rounded-lg">
-              <h4 className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-2">
+              <h4 className="text-xs sm:text-sm font-medium text-blue-900 dark:text-blue-100 mb-2">
                 How to get this URL:
               </h4>
               <ol className="text-xs text-blue-800 dark:text-blue-200 space-y-1">
@@ -1214,10 +1279,11 @@ export function DSADashboard() {
               </ol>
             </div>
 
-            <div className="flex justify-end gap-2">
+            <div className="flex flex-col sm:flex-row justify-end gap-2">
               <Button
                 variant="outline"
                 onClick={() => setShowAppsScriptSettings(false)}
+                className="w-full sm:w-auto"
               >
                 Cancel
               </Button>
@@ -1240,6 +1306,7 @@ export function DSADashboard() {
                   // Show success message
                   // Note: Toast will be handled by the parent component
                 }}
+                className="w-full sm:w-auto"
               >
                 Save
               </Button>
