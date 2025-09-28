@@ -123,6 +123,7 @@ export async function GET(request: Request) {
           link: row[2] || "",
           topic: row[3] || "",
           status: row[4] || "Pending",
+          pinned: row[5] === "TRUE" || row[5] === "true" || false,
         }
         return question
       })

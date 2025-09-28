@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { ExternalLink, Eye, Loader2, CheckCircle, Clock, RefreshCw, Shuffle, Search } from "lucide-react"
+import { ExternalLink, Eye, Loader2, CheckCircle, Clock, RefreshCw, Shuffle, Search, Pin, PinOff, Plus } from "lucide-react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { SheetConfig } from "@/components/sheet-config"
@@ -16,6 +16,7 @@ interface DSAQuestion {
   link: string
   topic: string
   status: string
+  pinned: boolean
 }
 
 interface Solution {
@@ -32,7 +33,9 @@ export function DSADashboard() {
   const [loadingSolution, setLoadingSolution] = useState(false)
   const [loadingQuestions, setLoadingQuestions] = useState(true)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [isAddQuestionDialogOpen, setIsAddQuestionDialogOpen] = useState(false)
   const [localStatuses, setLocalStatuses] = useState<Record<string, string>>({})
+  const [localPinned, setLocalPinned] = useState<Record<string, boolean>>({})
   const [highlightedQuestion, setHighlightedQuestion] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
   const [searchLoading, setSearchLoading] = useState(false)
@@ -44,17 +47,28 @@ export function DSADashboard() {
   } | null>(null)
   const [showSearchResults, setShowSearchResults] = useState(false)
   const searchRef = useRef<HTMLDivElement>(null)
+  const [questionInput, setQuestionInput] = useState("")
+  const [addingQuestion, setAddingQuestion] = useState(false)
 
   useEffect(() => {
     const saved = localStorage.getItem("dsa-question-statuses")
     if (saved) {
       setLocalStatuses(JSON.parse(saved))
     }
+    
+    const savedPinned = localStorage.getItem("dsa-question-pinned")
+    if (savedPinned) {
+      setLocalPinned(JSON.parse(savedPinned))
+    }
   }, [])
 
   useEffect(() => {
     localStorage.setItem("dsa-question-statuses", JSON.stringify(localStatuses))
   }, [localStatuses])
+
+  useEffect(() => {
+    localStorage.setItem("dsa-question-pinned", JSON.stringify(localPinned))
+  }, [localPinned])
 
   useEffect(() => {
     fetchQuestions()
@@ -145,8 +159,106 @@ export function DSADashboard() {
     }))
   }
 
+  const togglePinned = async (questionName: string, currentPinned: boolean) => {
+    const newPinnedStatus = !currentPinned
+    
+    // Optimistically update local state first
+    setLocalPinned((prev) => ({
+      ...prev,
+      [questionName]: newPinnedStatus,
+    }))
+
+    try {
+      // Update the sheet
+      const response = await fetch("/api/update-sheet", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          questionName: questionName,
+          pinned: newPinnedStatus,
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to update sheet")
+      }
+
+      const result = await response.json()
+      console.log("Sheet update result:", result)
+      
+    } catch (error) {
+      console.error("Error updating sheet:", error)
+      
+      // Revert local state on error
+      setLocalPinned((prev) => ({
+        ...prev,
+        [questionName]: currentPinned,
+      }))
+      
+      alert("Failed to update pinned status in sheet. Please try again.")
+    }
+  }
+
   const getEffectiveStatus = (question: DSAQuestion) => {
     return localStatuses[question.name] || question.status
+  }
+
+  const getEffectivePinned = (question: DSAQuestion) => {
+    return localPinned[question.name] !== undefined ? localPinned[question.name] : question.pinned
+  }
+
+  const handleAddQuestion = async () => {
+    if (!questionInput.trim()) return
+
+    setAddingQuestion(true)
+    try {
+      const response = await fetch("/api/add-question", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          questionInput: questionInput.trim(),
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to add question")
+      }
+
+      const newQuestion = await response.json()
+      
+      // Add the new question to the local state
+      setQuestions(prev => [newQuestion, ...prev])
+      
+      // Set the question as pinned locally
+      setLocalPinned(prev => ({
+        ...prev,
+        [newQuestion.name]: true
+      }))
+
+      // Note: In a real implementation, you would also update the Google Sheet here
+      // to add the new question row with pinned=TRUE
+      console.log("New question added:", newQuestion)
+      
+      // Clear the input and close dialog
+      setQuestionInput("")
+      setIsAddQuestionDialogOpen(false)
+      
+      // Highlight the new question
+      setHighlightedQuestion(newQuestion.name)
+      setTimeout(() => {
+        setHighlightedQuestion(null)
+      }, 3000)
+      
+    } catch (error) {
+      console.error("Error adding question:", error)
+      alert("Failed to add question. Please try again.")
+    } finally {
+      setAddingQuestion(false)
+    }
   }
 
   const fetchSolution = useCallback(async (question: DSAQuestion) => {
@@ -256,6 +368,18 @@ export function DSADashboard() {
       setSearchQuery("")
     }
   }, [questions])
+
+  // Sort questions to show pinned ones first
+  const sortedQuestions = useMemo(() => {
+    return [...questions].sort((a, b) => {
+      const aPinned = getEffectivePinned(a)
+      const bPinned = getEffectivePinned(b)
+      
+      if (aPinned && !bPinned) return -1
+      if (!aPinned && bPinned) return 1
+      return 0
+    })
+  }, [questions, localPinned])
 
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
@@ -373,6 +497,14 @@ export function DSADashboard() {
           </div>
           <div className="flex items-center gap-2">
             <SheetConfig onSheetUrlChange={handleSheetUrlChange} />
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => setIsAddQuestionDialogOpen(true)}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add Question
+            </Button>
             <Button variant="outline" size="sm" onClick={pickRandomPendingQuestion} disabled={pendingCount === 0}>
               <Shuffle className="h-4 w-4 mr-2" />
               Pick Random ({pendingCount})
@@ -467,8 +599,9 @@ export function DSADashboard() {
       </div>
 
       <div className="grid gap-4">
-        {questions.map((question, index) => {
+        {sortedQuestions.map((question, index) => {
           const effectiveStatus = getEffectiveStatus(question)
+          const effectivePinned = getEffectivePinned(question)
           const isHighlighted = highlightedQuestion === question.name
 
           return (
@@ -477,12 +610,23 @@ export function DSADashboard() {
               id={`question-${index}`}
               className={`hover:shadow-md transition-all duration-300 ${
                 isHighlighted ? "ring-2 ring-blue-500 shadow-lg bg-blue-50 dark:bg-blue-950/20" : ""
-              }`}
+              } ${effectivePinned ? "border-l-4 border-l-yellow-500" : ""}`}
             >
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div className="flex-1 space-y-2">
                     <div className="flex items-center gap-3">
+                      <button
+                        onClick={() => togglePinned(question.name, effectivePinned)}
+                        className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition-colors"
+                        title={effectivePinned ? "Unpin question" : "Pin question"}
+                      >
+                        {effectivePinned ? (
+                          <Pin className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
+                        ) : (
+                          <PinOff className="h-4 w-4 text-gray-400" />
+                        )}
+                      </button>
                       <h3 className="text-lg font-semibold text-foreground">{question.name}</h3>
                       <Badge variant="outline">{question.platform}</Badge>
                       <Badge
@@ -581,6 +725,60 @@ export function DSADashboard() {
               </div>
             </ScrollArea>
           ) : null}
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Question Dialog */}
+      <Dialog open={isAddQuestionDialogOpen} onOpenChange={setIsAddQuestionDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Add New Question</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium mb-2 block">
+                Question Link or Description
+              </label>
+              <Input
+                placeholder="Enter LeetCode/Codeforces link or describe the problem..."
+                value={questionInput}
+                onChange={(e) => setQuestionInput(e.target.value)}
+                className="w-full"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                You can paste a LeetCode/Codeforces URL or just describe the problem. Our AI will generate all the details.
+              </p>
+            </div>
+            
+            <div className="flex justify-end gap-2">
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setIsAddQuestionDialogOpen(false)
+                  setQuestionInput("")
+                }}
+              >
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleAddQuestion}
+                disabled={addingQuestion || !questionInput.trim()}
+              >
+                {addingQuestion ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Adding...
+                  </>
+                ) : (
+                  <>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Question
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
