@@ -113,7 +113,73 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    return NextResponse.json(questionData)
+    // Try to add to Google Sheet using Apps Script
+    const sheetUrl = process.env.GOOGLE_SHEET_URL || "https://docs.google.com/spreadsheets/d/1M0NOBIbt0A6OmJvIKYmYU0d8ODaTEVmzenhGOLizhbg/edit"
+    const sheetId = sheetUrl.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/)?.[1] || "1M0NOBIbt0A6OmJvIKYmYU0d8ODaTEVmzenhGOLizhbg"
+    
+    // First check for Apps Script URL in request cookies, then fallback to env
+    const appsScriptUrlFromCookie = request.headers.get('cookie')
+      ?.split(';')
+      .find(c => c.trim().startsWith('dsa-apps-script-url='))
+      ?.split('=')[1]
+    
+    const appsScriptUrl = appsScriptUrlFromCookie || 
+      process.env.GOOGLE_APPS_SCRIPT_URL || 
+      `https://script.google.com/macros/s/AKfycbzYOUR_SCRIPT_ID/exec`
+    
+    try {
+      const response = await fetch(appsScriptUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'addQuestion',
+          name: questionData.name,
+          platform: questionData.platform,
+          link: questionData.link,
+          topic: questionData.topic,
+          status: questionData.status,
+          pinned: questionData.pinned
+        })
+      })
+
+      if (response.ok) {
+        const result = await response.json()
+        if (result.success) {
+          return NextResponse.json({
+            ...questionData,
+            success: true,
+            message: result.message || `Question "${questionData.name}" added successfully`,
+            method: 'apps_script',
+            row: result.row
+          })
+        }
+      }
+    } catch (appsScriptError) {
+      console.log("Apps Script method failed:", appsScriptError)
+    }
+
+    // Fallback - return local data with setup instructions
+    return NextResponse.json({
+      ...questionData,
+      success: true,
+      message: `Question "${questionData.name}" added locally`,
+      method: 'local',
+      note: "Question added locally. To sync with Google Sheet, set up Apps Script.",
+      setupInstructions: {
+        title: "Enable Automatic Sheet Updates",
+        description: "To automatically add questions to your Google Sheet:",
+        steps: [
+          "1. Open your Google Sheet",
+          "2. Go to Extensions > Apps Script",
+          "3. Follow the setup guide in GOOGLE_APPS_SCRIPT_COMPLETE.md",
+          "4. Deploy the script as a web app",
+          "5. Questions will be added automatically!"
+        ],
+        alternative: "Or manually add this question to your Google Sheet"
+      }
+    })
   } catch (error) {
     console.error("Error generating question data:", error)
     return NextResponse.json({ error: "Failed to generate question data" }, { status: 500 })

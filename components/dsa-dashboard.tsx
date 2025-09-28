@@ -4,11 +4,12 @@ import { useState, useEffect, useCallback, useMemo, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { ExternalLink, Eye, Loader2, CheckCircle, Clock, RefreshCw, Shuffle, Search, Pin, PinOff, Plus, Github } from "lucide-react"
+import { ExternalLink, Eye, Loader2, CheckCircle, Clock, RefreshCw, Shuffle, Search, Pin, PinOff, Plus, Github, Settings } from "lucide-react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { SheetConfig } from "@/components/sheet-config"
 import { Input } from "@/components/ui/input"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 interface DSAQuestion {
   name: string
@@ -50,6 +51,9 @@ export function DSADashboard() {
   const [questionInput, setQuestionInput] = useState("")
   const [addingQuestion, setAddingQuestion] = useState(false)
   const [showConfigDialog, setShowConfigDialog] = useState(false)
+  const [showAppsScriptSettings, setShowAppsScriptSettings] = useState(false)
+  const [appsScriptUrl, setAppsScriptUrl] = useState("")
+  const [activeTab, setActiveTab] = useState("all")
 
   useEffect(() => {
     const saved = localStorage.getItem("dsa-question-statuses")
@@ -74,6 +78,12 @@ export function DSADashboard() {
     const sheetUrl = getCookie("dsa-sheet-url")
     if (!sheetUrl) {
       setShowConfigDialog(true)
+    }
+
+    // Load Apps Script URL from cookies
+    const savedAppsScriptUrl = getCookie("dsa-apps-script-url")
+    if (savedAppsScriptUrl) {
+      setAppsScriptUrl(savedAppsScriptUrl)
     }
   }, [])
 
@@ -168,26 +178,93 @@ export function DSADashboard() {
     setShowConfigDialog(false)
   }
 
-  const toggleStatus = (questionName: string, currentStatus: string) => {
+  // Helper function to open Google Sheet
+  const openGoogleSheet = () => {
+    // Get sheet URL from cookies
+    const getCookie = (name: string): string | null => {
+      if (typeof document === "undefined") return null
+      const value = `; ${document.cookie}`
+      const parts = value.split(`; ${name}=`)
+      if (parts.length === 2) return parts.pop()?.split(";").shift() || null
+      return null
+    }
+
+    const sheetUrl = getCookie("dsa-sheet-url")
+    let sheetId = "1M0NOBIbt0A6OmJvIKYmYU0d8ODaTEVmzenhGOLizhbg" // Default sheet ID
+
+    if (sheetUrl) {
+      // Extract sheet ID from the provided URL
+      const match = sheetUrl.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/)
+      if (match) {
+        sheetId = match[1]
+      }
+    }
+
+    // Create simple URL that opens the sheet
+    const sheetUrlToOpen = `https://docs.google.com/spreadsheets/d/${sheetId}/edit`
+    
+    // Open in new tab
+    window.open(sheetUrlToOpen, '_blank')
+  }
+
+  const toggleStatus = async (questionName: string, currentStatus: string) => {
     const newStatus = currentStatus.toLowerCase() === "solved" ? "Pending" : "Solved"
+    
+    // Optimistically update the UI immediately
     setLocalStatuses((prev) => ({
       ...prev,
       [questionName]: newStatus,
     }))
+    
+    try {
+      const response = await fetch("/api/update-status", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          questionName: questionName,
+          status: newStatus,
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to update status")
+      }
+
+      const result = await response.json()
+      console.log("Status update result:", result)
+      
+    } catch (error) {
+      console.error("Error updating status:", error)
+      
+      // Revert the optimistic update on error
+      setLocalStatuses((prev) => ({
+        ...prev,
+        [questionName]: currentStatus,
+      }))
+      
+      // Show error toast
+      const { toast } = require("@/hooks/use-toast")
+      toast({
+        title: "Error",
+        description: "Failed to update status. Please try again.",
+        variant: "destructive",
+      })
+    }
   }
 
   const togglePinned = async (questionName: string, currentPinned: boolean) => {
     const newPinnedStatus = !currentPinned
     
-    // Optimistically update local state first
+    // Optimistically update the UI immediately
     setLocalPinned((prev) => ({
       ...prev,
       [questionName]: newPinnedStatus,
     }))
-
+    
     try {
-      // Update the sheet
-      const response = await fetch("/api/update-sheet", {
+      const response = await fetch("/api/update-pinned", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -199,22 +276,28 @@ export function DSADashboard() {
       })
 
       if (!response.ok) {
-        throw new Error("Failed to update sheet")
+        throw new Error("Failed to update pinned status")
       }
 
       const result = await response.json()
-      console.log("Sheet update result:", result)
+      console.log("Pinned update result:", result)
       
     } catch (error) {
-      console.error("Error updating sheet:", error)
+      console.error("Error updating pinned status:", error)
       
-      // Revert local state on error
+      // Revert the optimistic update on error
       setLocalPinned((prev) => ({
         ...prev,
         [questionName]: currentPinned,
       }))
       
-      alert("Failed to update pinned status in sheet. Please try again.")
+      // Show error toast
+      const { toast } = require("@/hooks/use-toast")
+      toast({
+        title: "Error",
+        description: "Failed to update pinned status. Please try again.",
+        variant: "destructive",
+      })
     }
   }
 
@@ -247,18 +330,23 @@ export function DSADashboard() {
 
       const newQuestion = await response.json()
       
-      // Add the new question to the local state
-      setQuestions(prev => [newQuestion, ...prev])
-      
-      // Set the question as pinned locally
-      setLocalPinned(prev => ({
-        ...prev,
-        [newQuestion.name]: true
-      }))
-
-      // Note: In a real implementation, you would also update the Google Sheet here
-      // to add the new question row with pinned=TRUE
-      console.log("New question added:", newQuestion)
+      if (newQuestion.method === 'apps_script') {
+        // Question was added to Google Sheet, refresh the data
+        console.log("Question added to Google Sheet:", newQuestion)
+        // Refresh questions from the sheet
+        fetchQuestions()
+      } else {
+        // Add the new question to the local state only
+        setQuestions(prev => [newQuestion, ...prev])
+        
+        // Set the question as pinned locally
+        setLocalPinned(prev => ({
+          ...prev,
+          [newQuestion.name]: true
+        }))
+        
+        console.log("Question added locally:", newQuestion)
+      }
       
       // Clear the input and close dialog
       setQuestionInput("")
@@ -386,9 +474,19 @@ export function DSADashboard() {
     }
   }, [questions])
 
-  // Sort questions to show pinned ones first
+  // Sort and filter questions based on active tab
   const sortedQuestions = useMemo(() => {
-    return [...questions].sort((a, b) => {
+    let filteredQuestions = [...questions]
+    
+    // Filter based on active tab
+    if (activeTab === "solved") {
+      filteredQuestions = filteredQuestions.filter(q => getEffectiveStatus(q).toLowerCase() === "solved")
+    } else if (activeTab === "pending") {
+      filteredQuestions = filteredQuestions.filter(q => getEffectiveStatus(q).toLowerCase() === "pending")
+    }
+    
+    // Sort to show pinned ones first
+    return filteredQuestions.sort((a, b) => {
       const aPinned = getEffectivePinned(a)
       const bPinned = getEffectivePinned(b)
       
@@ -396,7 +494,7 @@ export function DSADashboard() {
       if (!aPinned && bPinned) return 1
       return 0
     })
-  }, [questions, localPinned])
+  }, [questions, localPinned, activeTab])
 
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
@@ -503,11 +601,54 @@ export function DSADashboard() {
 
   return (
     <div className="space-y-6 p-6">
+      {/* Manual update notice */}
+      {appsScriptUrl ? (
+        <div className="bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
+          <div className="flex items-start gap-3">
+            <div className="flex-shrink-0">
+              <div className="w-6 h-6 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center">
+                <span className="text-green-600 dark:text-green-400 text-sm font-bold">✓</span>
+              </div>
+            </div>
+            <div className="flex-1">
+              <h3 className="text-sm font-medium text-green-800 dark:text-green-200 mb-1">
+                Full Automation Enabled
+              </h3>
+              <p className="text-sm text-green-700 dark:text-green-300">
+                <strong>Click on pinned icons and status badges to toggle them automatically! </strong> 
+                Questions are added directly to your Google Sheet. All changes sync in real-time.
+              </p>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
+          <div className="flex items-start gap-3">
+            <div className="flex-shrink-0">
+              <div className="w-6 h-6 bg-amber-100 dark:bg-amber-900 rounded-full flex items-center justify-center">
+                <span className="text-amber-600 dark:text-amber-400 text-sm font-bold">!</span>
+              </div>
+            </div>
+            <div className="flex-1">
+              <h3 className="text-sm font-medium text-amber-800 dark:text-amber-200 mb-1">
+                Manual Sheet Updates Required
+              </h3>
+              <p className="text-sm text-amber-700 dark:text-amber-300">
+                <strong>Click on pinned icons and status badges to toggle them locally.</strong> 
+                Questions can be added directly to your Google Sheet. 
+                <br />
+                <em className="text-xs">Note: For full automation, set up Google Apps Script in your sheet (see setup instructions below).</em>
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Built by section */}
       <div className="flex justify-center">
         <div className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/20 dark:to-purple-950/20 rounded-full border border-blue-200 dark:border-blue-800">
           <div className="flex items-center gap-1 text-sm text-muted-foreground">
-            <span>Built with ❤️ by</span>
+            <span>Vibecoded by</span>
             <a
               href="https://github.com/Shibbu264"
               target="_blank"
@@ -532,6 +673,15 @@ export function DSADashboard() {
           </div>
           <div className="flex items-center gap-2">
             <SheetConfig onSheetUrlChange={handleSheetUrlChange} />
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => setShowAppsScriptSettings(true)}
+              title="Configure Apps Script URL"
+            >
+              <Settings className="h-4 w-4 mr-2" />
+              Apps Script
+            </Button>
             <Button 
               variant="outline" 
               size="sm" 
@@ -633,77 +783,246 @@ export function DSADashboard() {
         </div>
       </div>
 
-      <div className="grid gap-4">
-        {sortedQuestions.map((question, index) => {
-          const effectiveStatus = getEffectiveStatus(question)
-          const effectivePinned = getEffectivePinned(question)
-          const isHighlighted = highlightedQuestion === question.name
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="all" className="flex items-center gap-2">
+            All ({questions.length})
+          </TabsTrigger>
+          <TabsTrigger value="solved" className="flex items-center gap-2">
+            <CheckCircle className="h-4 w-4" />
+            Solved ({questions.filter(q => getEffectiveStatus(q).toLowerCase() === "solved").length})
+          </TabsTrigger>
+          <TabsTrigger value="pending" className="flex items-center gap-2">
+            <Clock className="h-4 w-4" />
+            Pending ({questions.filter(q => getEffectiveStatus(q).toLowerCase() === "pending").length})
+          </TabsTrigger>
+        </TabsList>
 
-          return (
-            <Card
-              key={index}
-              id={`question-${index}`}
-              className={`hover:shadow-md transition-all duration-300 ${
-                isHighlighted ? "ring-2 ring-blue-500 shadow-lg bg-blue-50 dark:bg-blue-950/20" : ""
-              } ${effectivePinned ? "border-l-4 border-l-yellow-500" : ""}`}
-            >
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div className="flex-1 space-y-2">
-                    <div className="flex items-center gap-3">
-                      <button
-                        onClick={() => togglePinned(question.name, effectivePinned)}
-                        className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition-colors"
-                        title={effectivePinned ? "Unpin question" : "Pin question"}
-                      >
-                        {effectivePinned ? (
-                          <Pin className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
-                        ) : (
-                          <PinOff className="h-4 w-4 text-gray-400" />
-                        )}
-                      </button>
-                      <h3 className="text-lg font-semibold text-foreground">{question.name}</h3>
-                      <Badge variant="outline">{question.platform}</Badge>
-                      <Badge
-                        className={`${getStatusColor(effectiveStatus)} cursor-pointer hover:opacity-80 transition-opacity`}
-                        onClick={() => toggleStatus(question.name, effectiveStatus)}
-                      >
-                        <div className="flex items-center gap-1">
-                          {getStatusIcon(effectiveStatus)}
-                          {effectiveStatus}
+        <TabsContent value="all" className="mt-6">
+          <div className="grid gap-4">
+            {sortedQuestions.map((question, index) => {
+              const effectiveStatus = getEffectiveStatus(question)
+              const effectivePinned = getEffectivePinned(question)
+              const isHighlighted = highlightedQuestion === question.name
+
+              return (
+                <Card
+                  key={index}
+                  id={`question-${index}`}
+                  className={`hover:shadow-md transition-all duration-300 ${
+                    isHighlighted ? "ring-2 ring-blue-500 shadow-lg bg-blue-50 dark:bg-blue-950/20" : ""
+                  } ${effectivePinned ? "border-l-4 border-l-yellow-500" : ""}`}
+                >
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1 space-y-2">
+                        <div className="flex items-center gap-3">
+                          <div 
+                            className="flex items-center gap-1 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 rounded p-1 transition-colors" 
+                            title={`Click to toggle pinned status`}
+                            onClick={() => togglePinned(question.name, effectivePinned)}
+                          >
+                            {effectivePinned ? (
+                              <Pin className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
+                            ) : (
+                              <PinOff className="h-4 w-4 text-gray-400" />
+                            )}
+                          </div>
+                          <h3 className="text-lg font-semibold text-foreground">{question.name}</h3>
+                          <Badge variant="outline">{question.platform}</Badge>
+                          <Badge 
+                            className={`${getStatusColor(effectiveStatus)} cursor-pointer hover:opacity-80 transition-opacity`}
+                            title={`Click to toggle status`}
+                            onClick={() => toggleStatus(question.name, effectiveStatus)}
+                          >
+                            <div className="flex items-center gap-1">
+                              {getStatusIcon(effectiveStatus)}
+                              {effectiveStatus}
+                            </div>
+                          </Badge>
                         </div>
-                      </Badge>
+
+                        {question.topic && (
+                          <p className="text-sm text-muted-foreground">
+                            <span className="font-medium">Topic:</span> {question.topic}
+                          </p>
+                        )}
+
+                        <div className="flex items-center gap-2">
+                          <ExternalLink className="h-4 w-4 text-muted-foreground" />
+                          <a
+                            href={question.link}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                          >
+                            View Problem
+                          </a>
+                        </div>
+                      </div>
+
+                      <Button onClick={() => fetchSolution(question)} className="ml-4">
+                        <Eye className="h-4 w-4 mr-2" />
+                        View Solution
+                      </Button>
                     </div>
+                  </CardContent>
+                </Card>
+              )
+            })}
+          </div>
+        </TabsContent>
 
-                    {question.topic && (
-                      <p className="text-sm text-muted-foreground">
-                        <span className="font-medium">Topic:</span> {question.topic}
-                      </p>
-                    )}
+        <TabsContent value="solved" className="mt-6">
+          <div className="grid gap-4">
+            {sortedQuestions.map((question, index) => {
+              const effectiveStatus = getEffectiveStatus(question)
+              const effectivePinned = getEffectivePinned(question)
+              const isHighlighted = highlightedQuestion === question.name
 
-                    <div className="flex items-center gap-2">
-                      <ExternalLink className="h-4 w-4 text-muted-foreground" />
-                      <a
-                        href={question.link}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
-                      >
-                        View Problem
-                      </a>
+              return (
+                <Card
+                  key={index}
+                  id={`question-${index}`}
+                  className={`hover:shadow-md transition-all duration-300 ${
+                    isHighlighted ? "ring-2 ring-blue-500 shadow-lg bg-blue-50 dark:bg-blue-950/20" : ""
+                  } ${effectivePinned ? "border-l-4 border-l-yellow-500" : ""}`}
+                >
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1 space-y-2">
+                        <div className="flex items-center gap-3">
+                          <div 
+                            className="flex items-center gap-1 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 rounded p-1 transition-colors" 
+                            title={`Click to toggle pinned status`}
+                            onClick={() => togglePinned(question.name, effectivePinned)}
+                          >
+                            {effectivePinned ? (
+                              <Pin className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
+                            ) : (
+                              <PinOff className="h-4 w-4 text-gray-400" />
+                            )}
+                          </div>
+                          <h3 className="text-lg font-semibold text-foreground">{question.name}</h3>
+                          <Badge variant="outline">{question.platform}</Badge>
+                          <Badge 
+                            className={`${getStatusColor(effectiveStatus)} cursor-pointer hover:opacity-80 transition-opacity`}
+                            title={`Click to toggle status`}
+                            onClick={() => toggleStatus(question.name, effectiveStatus)}
+                          >
+                            <div className="flex items-center gap-1">
+                              {getStatusIcon(effectiveStatus)}
+                              {effectiveStatus}
+                            </div>
+                          </Badge>
+                        </div>
+
+                        {question.topic && (
+                          <p className="text-sm text-muted-foreground">
+                            <span className="font-medium">Topic:</span> {question.topic}
+                          </p>
+                        )}
+
+                        <div className="flex items-center gap-2">
+                          <ExternalLink className="h-4 w-4 text-muted-foreground" />
+                          <a
+                            href={question.link}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                          >
+                            View Problem
+                          </a>
+                        </div>
+                      </div>
+
+                      <Button onClick={() => fetchSolution(question)} className="ml-4">
+                        <Eye className="h-4 w-4 mr-2" />
+                        View Solution
+                      </Button>
                     </div>
-                  </div>
+                  </CardContent>
+                </Card>
+              )
+            })}
+          </div>
+        </TabsContent>
 
-                  <Button onClick={() => fetchSolution(question)} className="ml-4">
-                    <Eye className="h-4 w-4 mr-2" />
-                    View Solution
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          )
-        })}
-      </div>
+        <TabsContent value="pending" className="mt-6">
+          <div className="grid gap-4">
+            {sortedQuestions.map((question, index) => {
+              const effectiveStatus = getEffectiveStatus(question)
+              const effectivePinned = getEffectivePinned(question)
+              const isHighlighted = highlightedQuestion === question.name
+
+              return (
+                <Card
+                  key={index}
+                  id={`question-${index}`}
+                  className={`hover:shadow-md transition-all duration-300 ${
+                    isHighlighted ? "ring-2 ring-blue-500 shadow-lg bg-blue-50 dark:bg-blue-950/20" : ""
+                  } ${effectivePinned ? "border-l-4 border-l-yellow-500" : ""}`}
+                >
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1 space-y-2">
+                        <div className="flex items-center gap-3">
+                          <div 
+                            className="flex items-center gap-1 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 rounded p-1 transition-colors" 
+                            title={`Click to toggle pinned status`}
+                            onClick={() => togglePinned(question.name, effectivePinned)}
+                          >
+                            {effectivePinned ? (
+                              <Pin className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
+                            ) : (
+                              <PinOff className="h-4 w-4 text-gray-400" />
+                            )}
+                          </div>
+                          <h3 className="text-lg font-semibold text-foreground">{question.name}</h3>
+                          <Badge variant="outline">{question.platform}</Badge>
+                          <Badge 
+                            className={`${getStatusColor(effectiveStatus)} cursor-pointer hover:opacity-80 transition-opacity`}
+                            title={`Click to toggle status`}
+                            onClick={() => toggleStatus(question.name, effectiveStatus)}
+                          >
+                            <div className="flex items-center gap-1">
+                              {getStatusIcon(effectiveStatus)}
+                              {effectiveStatus}
+                            </div>
+                          </Badge>
+                        </div>
+
+                        {question.topic && (
+                          <p className="text-sm text-muted-foreground">
+                            <span className="font-medium">Topic:</span> {question.topic}
+                          </p>
+                        )}
+
+                        <div className="flex items-center gap-2">
+                          <ExternalLink className="h-4 w-4 text-muted-foreground" />
+                          <a
+                            href={question.link}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                          >
+                            View Problem
+                          </a>
+                        </div>
+                      </div>
+
+                      <Button onClick={() => fetchSolution(question)} className="ml-4">
+                        <Eye className="h-4 w-4 mr-2" />
+                        View Solution
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              )
+            })}
+          </div>
+        </TabsContent>
+      </Tabs>
 
       {/* Optimized Dialog - Single instance for better performance */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -783,6 +1102,8 @@ export function DSADashboard() {
               />
               <p className="text-xs text-muted-foreground mt-1">
                 You can paste a LeetCode/Codeforces URL or just describe the problem. Our AI will generate all the details.
+                <br />
+                <strong>Note:</strong> Questions will be added to your Google Sheet automatically if Apps Script is set up, otherwise added locally.
               </p>
             </div>
             
@@ -853,6 +1174,76 @@ export function DSADashboard() {
             </div>
 
             <SheetConfig onSheetUrlChange={handleSheetUrlChange} embedded={true} />
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Apps Script Settings Dialog */}
+      <Dialog open={showAppsScriptSettings} onOpenChange={setShowAppsScriptSettings}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Configure Apps Script URL</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label htmlFor="apps-script-url" className="text-sm font-medium">
+                Apps Script Web App URL
+              </label>
+              <Input
+                id="apps-script-url"
+                type="url"
+                placeholder="https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec"
+                value={appsScriptUrl}
+                onChange={(e) => setAppsScriptUrl(e.target.value)}
+                className="mt-1"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Enter your deployed Apps Script web app URL for full automation
+              </p>
+            </div>
+            
+            <div className="bg-blue-50 dark:bg-blue-950/20 p-3 rounded-lg">
+              <h4 className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-2">
+                How to get this URL:
+              </h4>
+              <ol className="text-xs text-blue-800 dark:text-blue-200 space-y-1">
+                <li>1. Open your Google Sheet</li>
+                <li>2. Go to Extensions → Apps Script</li>
+                <li>3. Deploy as web app</li>
+                <li>4. Copy the web app URL</li>
+              </ol>
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setShowAppsScriptSettings(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={() => {
+                  // Save to cookies
+                  const setCookie = (name: string, value: string, days: number = 365) => {
+                    if (typeof document === "undefined") return
+                    const expires = new Date()
+                    expires.setTime(expires.getTime() + days * 24 * 60 * 60 * 1000)
+                    document.cookie = `${name}=${value};expires=${expires.toUTCString()};path=/`
+                  }
+                  
+                  if (appsScriptUrl.trim()) {
+                    setCookie("dsa-apps-script-url", appsScriptUrl)
+                  }
+                  
+                  setShowAppsScriptSettings(false)
+                  
+                  // Show success message
+                  // Note: Toast will be handled by the parent component
+                }}
+              >
+                Save
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
