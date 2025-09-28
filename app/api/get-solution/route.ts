@@ -1,6 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { generateText } from "ai"
-import { google } from "@ai-sdk/google"
+import { GoogleGenerativeAI } from "@google/generative-ai"
 
 export async function POST(request: NextRequest) {
   try {
@@ -23,7 +22,9 @@ export async function POST(request: NextRequest) {
     Platform: ${platform}
     Link: ${questionLink}
 
-    Please provide the response in the following JSON format:
+    You must respond with ONLY a valid JSON object. Do not include any markdown formatting, code blocks, or additional text. The response must be parseable JSON.
+
+    Required JSON format:
     {
       "questionLink": "${questionLink}",
       "description": "Brief description of the problem in 2-3 sentences",
@@ -32,23 +33,60 @@ export async function POST(request: NextRequest) {
       "cppSolution": "Complete C++ solution with comments"
     }
 
-    Make sure the C++ solution is complete, well-commented, and follows best practices. Include time and space complexity analysis in the approach section.
+    All values must be strings. Make sure the C++ solution is complete, well-commented, and follows best practices. Include time and space complexity analysis in the approach section.
     `
 
-    const { text } = await generateText({
-      model: google("gemini-1.5-flash"),
-      prompt: prompt,
-      temperature: 0.3,
+    const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GENERATIVE_AI_API_KEY!)
+    const model = genAI.getGenerativeModel({ 
+      model: "gemini-2.5-flash",
+      generationConfig: {
+        temperature: 0.3,
+      }
     })
+
+    const result = await model.generateContent(prompt)
+    const response = await result.response
+    const text = response.text()
+    
+    console.log("Raw Gemini response length:", text.length)
+    console.log("First 200 chars:", text.substring(0, 200))
 
     // Try to parse the JSON response
     let solution
     try {
-      // Extract JSON from the response if it's wrapped in markdown
-      const jsonMatch = text.match(/```json\n([\s\S]*?)\n```/) || text.match(/\{[\s\S]*\}/)
-      const jsonString = jsonMatch ? jsonMatch[1] || jsonMatch[0] : text
-      solution = JSON.parse(jsonString)
+      // First try to find JSON wrapped in markdown code blocks
+      let jsonString = text
+      
+      // Look for ```json...``` pattern
+      const jsonCodeBlockMatch = text.match(/```json\s*\n([\s\S]*?)\n```/)
+      if (jsonCodeBlockMatch) {
+        jsonString = jsonCodeBlockMatch[1]
+      } else {
+        // Look for any JSON object in the text
+        const jsonObjectMatch = text.match(/\{[\s\S]*\}/)
+        if (jsonObjectMatch) {
+          jsonString = jsonObjectMatch[0]
+        }
+      }
+      
+      // Clean up the JSON string
+      jsonString = jsonString.trim()
+      
+      // Parse the JSON
+      const parsedData = JSON.parse(jsonString)
+      
+      // Ensure all fields are strings and properly formatted
+      solution = {
+        questionLink: typeof parsedData.questionLink === 'string' ? parsedData.questionLink : questionLink,
+        description: typeof parsedData.description === 'string' ? parsedData.description : "Generated solution from Gemini AI",
+        inputOutput: typeof parsedData.inputOutput === 'string' ? parsedData.inputOutput : "Please refer to the problem link for examples",
+        approach: typeof parsedData.approach === 'string' ? parsedData.approach : "Detailed approach will be provided",
+        cppSolution: typeof parsedData.cppSolution === 'string' ? parsedData.cppSolution : "// Solution will be provided",
+      }
     } catch (parseError) {
+      console.error("JSON parsing error:", parseError)
+      console.error("Raw response:", text.substring(0, 500) + "...")
+      
       // If JSON parsing fails, create a structured response from the text
       solution = {
         questionLink: questionLink,

@@ -1,6 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { generateText } from "ai"
-import { google } from "@ai-sdk/google"
+import { GoogleGenerativeAI } from "@google/generative-ai"
 
 export async function POST(request: NextRequest) {
   try {
@@ -51,12 +50,17 @@ export async function POST(request: NextRequest) {
     }
     `
 
-    const { text } = await generateText({
-      model: google("gemini-1.5-flash"),
-      prompt: prompt,
-      temperature: 0.3,
-      maxTokens: 500,
+    const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GENERATIVE_AI_API_KEY!)
+    const model = genAI.getGenerativeModel({ 
+      model: "gemini-2.5-flash",
+      generationConfig: {
+        temperature: 0.3,
+      }
     })
+
+    const generationResult = await model.generateContent(prompt)
+    const response = await generationResult.response
+    const text = response.text()
 
     // Try to parse the JSON response
     let result
