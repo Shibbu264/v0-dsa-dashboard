@@ -11,9 +11,10 @@ import { useToast } from "@/hooks/use-toast"
 
 interface SheetConfigProps {
   onSheetUrlChange: (url: string) => void
+  embedded?: boolean
 }
 
-export function SheetConfig({ onSheetUrlChange }: SheetConfigProps) {
+export function SheetConfig({ onSheetUrlChange, embedded = false }: SheetConfigProps) {
   const [sheetUrl, setSheetUrl] = useState("")
   const [isOpen, setIsOpen] = useState(false)
   const { toast } = useToast()
@@ -23,13 +24,8 @@ export function SheetConfig({ onSheetUrlChange }: SheetConfigProps) {
     const savedUrl = getCookie("dsa-sheet-url")
     if (savedUrl) {
       setSheetUrl(savedUrl)
-    } else {
-      // Default URL if none saved
-      const defaultUrl =
-        "https://docs.google.com/spreadsheets/d/1M0NOBIbt0A6OmJvIKYmYU0d8ODaTEVmzenhGOLizhbg/edit?usp=sharing"
-      setSheetUrl(defaultUrl)
-      setCookie("dsa-sheet-url", defaultUrl, 365)
     }
+    // Always leave input blank if no saved URL exists
   }, [])
 
   const getCookie = (name: string): string | null => {
@@ -78,7 +74,9 @@ export function SheetConfig({ onSheetUrlChange }: SheetConfigProps) {
     // Notify parent component
     onSheetUrlChange(sheetUrl)
 
-    setIsOpen(false)
+    if (!embedded) {
+      setIsOpen(false)
+    }
     toast({
       title: "Success",
       description: "Sheet URL saved successfully!",
@@ -88,6 +86,83 @@ export function SheetConfig({ onSheetUrlChange }: SheetConfigProps) {
   const getCurrentSheetId = () => {
     const savedUrl = getCookie("dsa-sheet-url")
     return savedUrl ? extractSheetId(savedUrl) : null
+  }
+
+  const content = (
+    <div className="space-y-6">
+      {!embedded && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm">Current Configuration</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              <p className="text-sm text-muted-foreground">
+                Sheet ID:{" "}
+                <code className="bg-muted px-2 py-1 rounded text-xs">{getCurrentSheetId() || "Not configured"}</code>
+              </p>
+              {getCookie("dsa-sheet-url") && (
+                <div className="flex items-center gap-2">
+                  <ExternalLink className="h-4 w-4" />
+                  <a
+                    href={getCookie("dsa-sheet-url") || ""}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                  >
+                    View Current Sheet
+                  </a>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      <div className="space-y-4">
+        <div>
+          <Label htmlFor="sheet-url">Google Sheets URL</Label>
+          <Input
+            id="sheet-url"
+            type="url"
+            placeholder="https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID/edit?usp=sharing"
+            value={sheetUrl}
+            onChange={(e) => setSheetUrl(e.target.value)}
+            className="mt-1"
+          />
+          <p className="text-xs text-muted-foreground mt-1">
+            Make sure your Google Sheet is publicly accessible (Anyone with the link can view)
+          </p>
+        </div>
+
+        <div className="bg-muted p-4 rounded-lg">
+          <h4 className="text-sm font-medium mb-2">Expected Sheet Format:</h4>
+          <div className="text-xs text-muted-foreground space-y-1">
+            <p>Column A: Problem Name</p>
+            <p>Column B: Platform (e.g., LeetCode, HackerRank)</p>
+            <p>Column C: Link (Problem URL)</p>
+            <p>Column D: Topic (e.g., Arrays, Dynamic Programming)</p>
+            <p>Column E: Status (Solved, Pending, etc.)</p>
+          </div>
+        </div>
+
+        <div className="flex justify-end gap-2">
+          {!embedded && (
+            <Button variant="outline" onClick={() => setIsOpen(false)}>
+              Cancel
+            </Button>
+          )}
+          <Button onClick={handleSave}>
+            <Save className="h-4 w-4 mr-2" />
+            Save Configuration
+          </Button>
+        </div>
+      </div>
+    </div>
+  )
+
+  if (embedded) {
+    return content
   }
 
   return (
@@ -102,73 +177,7 @@ export function SheetConfig({ onSheetUrlChange }: SheetConfigProps) {
         <DialogHeader>
           <DialogTitle>Configure Google Sheets Data Source</DialogTitle>
         </DialogHeader>
-
-        <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm">Current Configuration</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <p className="text-sm text-muted-foreground">
-                  Sheet ID:{" "}
-                  <code className="bg-muted px-2 py-1 rounded text-xs">{getCurrentSheetId() || "Not configured"}</code>
-                </p>
-                {getCookie("dsa-sheet-url") && (
-                  <div className="flex items-center gap-2">
-                    <ExternalLink className="h-4 w-4" />
-                    <a
-                      href={getCookie("dsa-sheet-url") || ""}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
-                    >
-                      View Current Sheet
-                    </a>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="sheet-url">Google Sheets URL</Label>
-              <Input
-                id="sheet-url"
-                type="url"
-                placeholder="https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID/edit?usp=sharing"
-                value={sheetUrl}
-                onChange={(e) => setSheetUrl(e.target.value)}
-                className="mt-1"
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                Make sure your Google Sheet is publicly accessible (Anyone with the link can view)
-              </p>
-            </div>
-
-            <div className="bg-muted p-4 rounded-lg">
-              <h4 className="text-sm font-medium mb-2">Expected Sheet Format:</h4>
-              <div className="text-xs text-muted-foreground space-y-1">
-                <p>Column A: Problem Name</p>
-                <p>Column B: Platform (e.g., LeetCode, HackerRank)</p>
-                <p>Column C: Link (Problem URL)</p>
-                <p>Column D: Topic (e.g., Arrays, Dynamic Programming)</p>
-                <p>Column E: Status (Solved, Pending, etc.)</p>
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setIsOpen(false)}>
-                Cancel
-              </Button>
-              <Button onClick={handleSave}>
-                <Save className="h-4 w-4 mr-2" />
-                Save Configuration
-              </Button>
-            </div>
-          </div>
-        </div>
+        {content}
       </DialogContent>
     </Dialog>
   )

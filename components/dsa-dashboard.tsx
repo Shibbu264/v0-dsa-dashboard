@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { ExternalLink, Eye, Loader2, CheckCircle, Clock, RefreshCw, Shuffle, Search, Pin, PinOff, Plus } from "lucide-react"
+import { ExternalLink, Eye, Loader2, CheckCircle, Clock, RefreshCw, Shuffle, Search, Pin, PinOff, Plus, Github } from "lucide-react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { SheetConfig } from "@/components/sheet-config"
@@ -49,6 +49,7 @@ export function DSADashboard() {
   const searchRef = useRef<HTMLDivElement>(null)
   const [questionInput, setQuestionInput] = useState("")
   const [addingQuestion, setAddingQuestion] = useState(false)
+  const [showConfigDialog, setShowConfigDialog] = useState(false)
 
   useEffect(() => {
     const saved = localStorage.getItem("dsa-question-statuses")
@@ -59,6 +60,20 @@ export function DSADashboard() {
     const savedPinned = localStorage.getItem("dsa-question-pinned")
     if (savedPinned) {
       setLocalPinned(JSON.parse(savedPinned))
+    }
+
+    // Check if sheet URL cookie exists, if not show config dialog
+    const getCookie = (name: string): string | null => {
+      if (typeof document === "undefined") return null
+      const value = `; ${document.cookie}`
+      const parts = value.split(`; ${name}=`)
+      if (parts.length === 2) return parts.pop()?.split(";").shift() || null
+      return null
+    }
+
+    const sheetUrl = getCookie("dsa-sheet-url")
+    if (!sheetUrl) {
+      setShowConfigDialog(true)
     }
   }, [])
 
@@ -149,6 +164,8 @@ export function DSADashboard() {
   const handleSheetUrlChange = (url: string) => {
     // Refresh questions when sheet URL changes
     fetchQuestions()
+    // Close the auto-shown config dialog
+    setShowConfigDialog(false)
   }
 
   const toggleStatus = (questionName: string, currentStatus: string) => {
@@ -486,6 +503,24 @@ export function DSADashboard() {
 
   return (
     <div className="space-y-6 p-6">
+      {/* Built by section */}
+      <div className="flex justify-center">
+        <div className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/20 dark:to-purple-950/20 rounded-full border border-blue-200 dark:border-blue-800">
+          <div className="flex items-center gap-1 text-sm text-muted-foreground">
+            <span>Built with ❤️ by</span>
+            <a
+              href="https://github.com/Shibbu264"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium transition-colors"
+            >
+              <Github className="h-4 w-4" />
+              Shibbu264
+            </a>
+          </div>
+        </div>
+      </div>
+
       <div className="flex flex-col gap-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
@@ -778,6 +813,46 @@ export function DSADashboard() {
                 )}
               </Button>
             </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Auto-shown Configuration Dialog when no sheet URL exists */}
+      <Dialog open={showConfigDialog} onOpenChange={setShowConfigDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Configure Your DSA Sheet</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-6">
+            <div className="bg-blue-50 dark:bg-blue-950/20 p-4 rounded-lg">
+              <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-2">
+                📋 Setup Instructions
+              </h4>
+              <div className="text-sm text-blue-800 dark:text-blue-200 space-y-2">
+                <p>To get started, you need to create your own copy of the DSA questions sheet:</p>
+                <ol className="list-decimal list-inside space-y-1 ml-4">
+                  <li>Click the link below to open the template sheet</li>
+                  <li>Click "File" → "Make a copy" to create your own copy</li>
+                  <li>Make sure your copy is set to "Anyone with the link can view"</li>
+                  <li>Copy the URL of your new sheet and paste it in the input below</li>
+                </ol>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 p-3 bg-muted rounded-lg">
+              <ExternalLink className="h-4 w-4 text-muted-foreground" />
+              <a
+                href="https://docs.google.com/spreadsheets/d/1M0NOBIbt0A6OmJvIKYmYU0d8ODaTEVmzenhGOLizhbg/edit?usp=sharing"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium"
+              >
+                Open Template Sheet →
+              </a>
+            </div>
+
+            <SheetConfig onSheetUrlChange={handleSheetUrlChange} embedded={true} />
           </div>
         </DialogContent>
       </Dialog>
