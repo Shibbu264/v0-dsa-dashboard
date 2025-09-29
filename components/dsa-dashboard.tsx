@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { ExternalLink, Eye, Loader2, CheckCircle, Clock, RefreshCw, Shuffle, Search, Pin, PinOff, Plus, Github, Settings } from "lucide-react"
+import { ExternalLink, Eye, Loader2, CheckCircle, Clock, RefreshCw, Shuffle, Search, Pin, PinOff, Plus, Github, Settings, Save } from "lucide-react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { SheetConfig } from "@/components/sheet-config"
@@ -1205,40 +1205,59 @@ export function DSADashboard() {
 
       {/* Auto-shown Configuration Dialog when no sheet URL exists */}
       <Dialog open={showConfigDialog} onOpenChange={setShowConfigDialog}>
-        <DialogContent className="max-w-2xl w-[95vw] sm:w-full">
-          <DialogHeader>
+        <DialogContent className="max-w-2xl w-[95vw] sm:w-full max-h-[90vh] flex flex-col">
+          <DialogHeader className="flex-shrink-0">
             <DialogTitle className="text-sm sm:text-base">Configure Your DSA Sheet</DialogTitle>
           </DialogHeader>
           
-          <div className="space-y-4 sm:space-y-6">
-            <div className="bg-blue-50 dark:bg-blue-950/20 p-3 sm:p-4 rounded-lg">
-              <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-2 text-sm sm:text-base">
-                📋 Setup Instructions
-              </h4>
-              <div className="text-xs sm:text-sm text-blue-800 dark:text-blue-200 space-y-2">
-                <p>To get started, you need to create your own copy of the DSA questions sheet:</p>
-                <ol className="list-decimal list-inside space-y-1 ml-2 sm:ml-4">
-                  <li>Click the link below to open the template sheet</li>
-                  <li>Click "File" → "Make a copy" to create your own copy</li>
-                  <li>Make sure your copy is set to "Anyone with the link can view"</li>
-                  <li>Copy the URL of your new sheet and paste it in the input below</li>
-                </ol>
+          <div className="flex-1 overflow-y-auto">
+            <div className="space-y-4 sm:space-y-6 p-1 pr-4 pb-20">
+              <div className="bg-blue-50 dark:bg-blue-950/20 p-3 sm:p-4 rounded-lg">
+                <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-2 text-sm sm:text-base">
+                  📋 Setup Instructions
+                </h4>
+                <div className="text-xs sm:text-sm text-blue-800 dark:text-blue-200 space-y-2">
+                  <p>To get started, you need to create your own copy of the DSA questions sheet:</p>
+                  <ol className="list-decimal list-inside space-y-1 ml-2 sm:ml-4">
+                    <li>Click the link below to open the template sheet</li>
+                    <li>Click "File" → "Make a copy" to create your own copy</li>
+                    <li>Make sure your copy is set to "Anyone with the link can view"</li>
+                    <li>Copy the URL of your new sheet and paste it in the input below</li>
+                  </ol>
+                </div>
               </div>
-            </div>
 
-            <div className="flex items-center gap-2 p-3 bg-muted rounded-lg">
-              <ExternalLink className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
-              <a
-                href="https://docs.google.com/spreadsheets/d/1M0NOBIbt0A6OmJvIKYmYU0d8ODaTEVmzenhGOLizhbg/edit?usp=sharing"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-xs sm:text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium break-all"
-              >
-                Open Template Sheet →
-              </a>
-            </div>
+              <div className="flex items-center gap-2 p-3 bg-muted rounded-lg">
+                <ExternalLink className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
+                <a
+                  href="https://docs.google.com/spreadsheets/d/1M0NOBIbt0A6OmJvIKYmYU0d8ODaTEVmzenhGOLizhbg/edit?usp=sharing"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs sm:text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium break-all"
+                >
+                  Open Template Sheet →
+                </a>
+              </div>
 
-            <SheetConfig onSheetUrlChange={handleSheetUrlChange} embedded={true} />
+              <SheetConfig onSheetUrlChange={handleSheetUrlChange} embedded={true} />
+            </div>
+          </div>
+          
+          {/* Floating Save Button */}
+          <div className="absolute bottom-0 left-0 right-0 bg-background border-t p-4 flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setShowConfigDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={() => {
+              // Trigger save from SheetConfig
+              const saveButton = document.querySelector('[data-save-config]') as HTMLButtonElement;
+              if (saveButton) {
+                saveButton.click();
+              }
+            }}>
+              <Save className="h-4 w-4 mr-2" />
+              Save Configuration
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

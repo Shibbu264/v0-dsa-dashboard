@@ -6,7 +6,6 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { ScrollArea } from "@/components/ui/scroll-area"
 import { Settings, Save, ExternalLink } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 
@@ -102,8 +101,7 @@ export function SheetConfig({ onSheetUrlChange, embedded = false }: SheetConfigP
   }
 
   const content = (
-    <ScrollArea className="h-full">
-      <div className="space-y-6 p-1">
+    <div className="space-y-6 p-1">
       {!embedded && (
         <Card>
           <CardHeader>
@@ -312,20 +310,19 @@ function createResponse(data) {
           </div>
         </div>
 
-        <div className="flex justify-end gap-2">
-          {!embedded && (
+        {!embedded && (
+          <div className="flex justify-end gap-2">
             <Button variant="outline" onClick={() => setIsOpen(false)}>
               Cancel
             </Button>
-          )}
-          <Button onClick={handleSave}>
-            <Save className="h-4 w-4 mr-2" />
-            Save Configuration
-          </Button>
-        </div>
+            <Button onClick={handleSave}>
+              <Save className="h-4 w-4 mr-2" />
+              Save Configuration
+            </Button>
+          </div>
+        )}
       </div>
-      </div>
-    </ScrollArea>
+    </div>
   )
 
   if (embedded) {
