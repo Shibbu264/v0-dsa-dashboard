@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
     }
 
     const sheetUrl = getCookie("dsa-sheet-url")
-    let sheetId = "1M0NOBIbt0A6OmJvIKYmYU0d8ODaTEVmzenhGOLizhbg" // Default sheet ID
+    let sheetId = "1v1LaGp7clblCR8IzRDiFHfglV7B-I4sx3perKvCL5IE" // Default sheet ID
 
     if (sheetUrl) {
       // Extract sheet ID from the provided URL

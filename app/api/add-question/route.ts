@@ -114,8 +114,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Try to add to Google Sheet using Apps Script
-    const sheetUrl = process.env.GOOGLE_SHEET_URL || "https://docs.google.com/spreadsheets/d/1M0NOBIbt0A6OmJvIKYmYU0d8ODaTEVmzenhGOLizhbg/edit"
-    const sheetId = sheetUrl.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/)?.[1] || "1M0NOBIbt0A6OmJvIKYmYU0d8ODaTEVmzenhGOLizhbg"
+    const sheetUrl = process.env.GOOGLE_SHEET_URL || "https://docs.google.com/spreadsheets/d/1v1LaGp7clblCR8IzRDiFHfglV7B-I4sx3perKvCL5IE/edit"
+    const sheetId = sheetUrl.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/)?.[1] || "1v1LaGp7clblCR8IzRDiFHfglV7B-I4sx3perKvCL5IE"
     
     // First check for Apps Script URL in request cookies, then fallback to env
     const appsScriptUrlFromCookie = request.headers.get('cookie')

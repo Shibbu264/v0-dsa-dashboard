@@ -4,8 +4,8 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url)
     const sheetUrl = searchParams.get("url")
 
-    let sheetId = "1M0NOBIbt0A6OmJvIKYmYU0d8ODaTEVmzenhGOLizhbg" // Default sheet ID
-
+    let sheetId = "1v1LaGp7clblCR8IzRDiFHfglV7B-I4sx3perKvCL5IE" // Default sheet ID
+    https://docs.google.com/spreadsheets/d/1v1LaGp7clblCR8IzRDiFHfglV7B-I4sx3perKvCL5IE/view
     if (sheetUrl) {
       // Extract sheet ID from the provided URL
       const match = sheetUrl.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/)

@@ -190,8 +190,8 @@ export function DSADashboard() {
     }
 
     const sheetUrl = getCookie("dsa-sheet-url")
-    let sheetId = "1M0NOBIbt0A6OmJvIKYmYU0d8ODaTEVmzenhGOLizhbg" // Default sheet ID
-
+    let sheetId = "1v1LaGp7clblCR8IzRDiFHfglV7B-I4sx3perKvCL5IE" // Default sheet ID
+  
     if (sheetUrl) {
       // Extract sheet ID from the provided URL
       const match = sheetUrl.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/)
@@ -1230,7 +1230,7 @@ export function DSADashboard() {
               <div className="flex items-center gap-2 p-3 bg-muted rounded-lg">
                 <ExternalLink className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
                 <a
-                  href="https://docs.google.com/spreadsheets/d/1M0NOBIbt0A6OmJvIKYmYU0d8ODaTEVmzenhGOLizhbg/edit?usp=sharing"
+                  href="https://docs.google.com/spreadsheets/d/1v1LaGp7clblCR8IzRDiFHfglV7B-I4sx3perKvCL5IE/edit?usp=sharing"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-xs sm:text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium break-all"

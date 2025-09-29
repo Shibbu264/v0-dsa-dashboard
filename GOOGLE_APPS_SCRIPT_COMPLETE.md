@@ -20,7 +20,7 @@ This solution enables full functionality for any copied Google Sheet without req
 ## 📋 **Setup Instructions (For Sheet Owners)**
 
 ### **Step 1: Copy the Template Sheet**
-1. Copy this sheet: `https://docs.google.com/spreadsheets/d/1M0NOBIbt0A6OmJvIKYmYU0d8ODaTEVmzenhGOLizhbg/edit`
+1. Copy this sheet: `https://docs.google.com/spreadsheets/d/1v1LaGp7clblCR8IzRDiFHfglV7B-I4sx3perKvCL5IE/view`
 2. Your copy will have the Apps Script pre-installed
 
 ### **Step 2: Deploy the Script (One-time)**

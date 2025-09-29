@@ -113,7 +113,7 @@ export function SheetConfig({ onSheetUrlChange, embedded = false }: SheetConfigP
                 Sheet ID:{" "}
                 <code className="bg-muted px-2 py-1 rounded text-xs">{getCurrentSheetId() || "Not configured"}</code>
               </p>
-              {getCookie("dsa-sheet-url") && (
+              {getCookie("dsa-sheet-url") ? (
                 <div className="flex items-center gap-2">
                   <ExternalLink className="h-4 w-4" />
                   <a
@@ -124,6 +124,35 @@ export function SheetConfig({ onSheetUrlChange, embedded = false }: SheetConfigP
                   >
                     View Current Sheet
                   </a>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <div className="bg-blue-50 dark:bg-blue-950/20 p-3 rounded-lg">
+                    <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-2 text-sm">
+                      📋 Setup Instructions
+                    </h4>
+                    <div className="text-xs text-blue-800 dark:text-blue-200 space-y-2">
+                      <p>To get started, you need to create your own copy of the DSA questions sheet:</p>
+                      <ol className="list-decimal list-inside space-y-1 ml-2">
+                        <li>Click the link below to open the template sheet</li>
+                        <li>Click "File" → "Make a copy" to create your own copy</li>
+                        <li>Make sure your copy is set to "Anyone with the link can view"</li>
+                        <li>Copy the URL of your new sheet and paste it in the input below</li>
+                      </ol>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-2 p-3 bg-muted rounded-lg">
+                    <ExternalLink className="h-4 w-4 text-muted-foreground" />
+                    <a
+                      href="https://docs.google.com/spreadsheets/d/1v1LaGp7clblCR8IzRDiFHfglV7B-I4sx3perKvCL5IE/edit?usp=sharing"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium break-all"
+                    >
+                      Open Template Sheet →
+                    </a>
+                  </div>
                 </div>
               )}
             </div>
@@ -274,7 +303,7 @@ function createResponse(data) {
           <Input
             id="sheet-url"
             type="url"
-            placeholder="https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID/edit?usp=sharing"
+            placeholder="https://docs.google.com/..."
             value={sheetUrl}
             onChange={(e) => setSheetUrl(e.target.value)}
             className="mt-1"
@@ -341,8 +370,22 @@ function createResponse(data) {
         <DialogHeader className="flex-shrink-0">
           <DialogTitle>Configure Google Sheets Data Source</DialogTitle>
         </DialogHeader>
-        <div className="flex-1 min-h-0 overflow-hidden">
-          {content}
+        
+        <div className="flex-1 overflow-y-auto">
+          <div className="pb-20">
+            {content}
+          </div>
+        </div>
+        
+        {/* Floating Save Button */}
+        <div className="absolute bottom-0 left-0 right-0 bg-background border-t p-4 flex justify-end gap-2">
+          <Button variant="outline" onClick={() => setIsOpen(false)}>
+            Cancel
+          </Button>
+          <Button onClick={handleSave}>
+            <Save className="h-4 w-4 mr-2" />
+            Save Configuration
+          </Button>
         </div>
       </DialogContent>
     </Dialog>
