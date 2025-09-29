@@ -102,7 +102,7 @@ export function SheetConfig({ onSheetUrlChange, embedded = false }: SheetConfigP
   }
 
   const content = (
-    <ScrollArea className="max-h-[80vh]">
+    <ScrollArea className="h-full">
       <div className="space-y-6 p-1">
       {!embedded && (
         <Card>
@@ -340,11 +340,13 @@ function createResponse(data) {
           Configure Sheet
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
+      <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle>Configure Google Sheets Data Source</DialogTitle>
         </DialogHeader>
-        {content}
+        <div className="flex-1 min-h-0 overflow-hidden">
+          {content}
+        </div>
       </DialogContent>
     </Dialog>
   )
